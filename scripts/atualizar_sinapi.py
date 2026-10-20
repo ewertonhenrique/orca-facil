@@ -105,41 +105,62 @@ def num(v):
 
 def ler_aba(ws):
     """Devolve {codigo: (descricao, unidade, {UF: custo})}."""
-    linhas = ws.iter_rows(values_only=True)
-    cab = None
-    for i, linha in enumerate(linhas):
+    topo = [list(l) for l in ws.iter_rows(min_row=1, max_row=40, values_only=True)]
+    i_cab = None
+    for i, linha in enumerate(topo):
         n = [norm(c) for c in linha]
         if any(c.startswith("CODIGO") for c in n) and any(c.startswith("DESCRI") for c in n):
-            cab = n
+            i_cab = i
             break
-        if i > 30:
-            break
-    if cab is None:
+    if i_cab is None:
+        diagnostico(ws.title, topo)
         raise RuntimeError(f"Cabeçalho não encontrado na aba {ws.title}")
+    cab = [norm(c) for c in topo[i_cab]]
     col_cod = next(i for i, c in enumerate(cab) if c.startswith("CODIGO"))
     col_desc = next(i for i, c in enumerate(cab) if c.startswith("DESCRI"))
     col_un = next((i for i, c in enumerate(cab) if c.startswith("UNID")), None)
+    # as siglas das UFs podem estar na própria linha de cabeçalho ou numa linha logo acima
     col_uf = {}
-    for i, c in enumerate(cab):
-        if c in UFS and c not in col_uf:  # primeira coluna com o nome da UF é o custo
-            col_uf[c] = i
+    for k in range(i_cab, max(-1, i_cab - 4), -1):
+        linha = [norm(c) for c in topo[k]]
+        achou = {c: i for i, c in reversed(list(enumerate(linha))) if c in UFS}
+        if len(achou) >= 20:
+            col_uf = achou
+            break
     if not col_uf:
-        for j, linha in enumerate(ws.iter_rows(min_row=1, max_row=12, values_only=True), 1):
-            aviso(f"{ws.title} linha {j}: " + " | ".join(str(c)[:25] for c in linha[:40] if c is not None))
+        diagnostico(ws.title, topo[max(0, i_cab - 3):i_cab + 3], i_cab - 2)
         raise RuntimeError(f"Colunas de UF não encontradas na aba {ws.title}")
+    # se a UF ocupa duas colunas (custo e %AS), usa a de custo
+    for uf, i in list(col_uf.items()):
+        sub = cab[i] if i < len(cab) else ""
+        if "AS" in sub.split() or sub.startswith("%"):
+            col_uf[uf] = i + 1 if "CUSTO" in (cab[i + 1] if i + 1 < len(cab) else "") else i - 1
     itens = {}
-    for linha in linhas:
+    for linha in ws.iter_rows(min_row=i_cab + 2, values_only=True):
         if linha is None or len(linha) <= col_desc:
             continue
         cod = linha[col_cod]
         if cod is None or str(cod).strip() == "":
             continue
-        cod = str(cod).strip().split(".")[0] if isinstance(cod, float) else str(cod).strip()
+        cod = str(int(cod)) if isinstance(cod, float) else str(cod).strip()
+        if not re.match(r"^[0-9A-Z./-]+$", cod):
+            continue
         desc = str(linha[col_desc] or "").strip()
         un = str(linha[col_un] or "").strip() if col_un is not None else ""
         custos = {uf: num(linha[i]) for uf, i in col_uf.items() if i < len(linha)}
         itens[cod] = (desc, un, custos)
+    if not itens:
+        diagnostico(ws.title, topo[max(0, i_cab - 1):i_cab + 4], i_cab)
+        raise RuntimeError(f"Nenhum item lido na aba {ws.title}")
+    amostra = next(iter(itens.items()))
+    print(f"  {ws.title}: exemplo {amostra[0]} {amostra[1][0][:40]} {amostra[1][1]} GO={amostra[1][2].get('GO')}")
     return itens
+
+
+def diagnostico(aba, linhas, inicio=0):
+    for j, linha in enumerate(linhas, inicio + 1):
+        cel = [f"{i}={str(c)[:30]}" for i, c in enumerate(linha[:12]) if c is not None]
+        aviso(f"{aba} linha {j}: " + " | ".join(cel))
 
 
 def gerar(wb, referencia):
