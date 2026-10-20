@@ -81,7 +81,10 @@ def abrir_planilha(zip_bytes):
         if not nomes:
             raise RuntimeError("Nenhum .xlsx dentro do zip")
         print(f"  lendo {nomes[0]}")
-        return openpyxl.load_workbook(io.BytesIO(z.read(nomes[0])), read_only=True, data_only=True)
+        bruto = z.read(nomes[0])
+        wb = openpyxl.load_workbook(io.BytesIO(bruto), read_only=True, data_only=True)
+        wb._bruto = bruto
+        return wb
 
 
 def achar_aba(wb, sigla):
@@ -149,9 +152,15 @@ def ler_aba(ws):
         un = str(linha[col_un] or "").strip() if col_un is not None else ""
         custos = {uf: num(linha[i]) for uf, i in col_uf.items() if i < len(linha)}
         itens[cod] = (desc, un, custos)
-    if not itens:
+    if len(itens) < 100:
         diagnostico(ws.title, topo[max(0, i_cab - 1):i_cab + 4], i_cab)
-        raise RuntimeError(f"Nenhum item lido na aba {ws.title}")
+        bruto = getattr(ws.parent, "_bruto", None)
+        if bruto:
+            wf = openpyxl.load_workbook(io.BytesIO(bruto), read_only=True, data_only=False)[ws.title]
+            for j, linha in enumerate(wf.iter_rows(min_row=i_cab + 2, max_row=i_cab + 4, values_only=True), i_cab + 2):
+                cel = [f"{i}={str(c)[:70]}" for i, c in enumerate(linha[:14]) if c is not None]
+                aviso(f"{ws.title} fórmulas linha {j}: " + " | ".join(cel))
+        raise RuntimeError(f"Só {len(itens)} itens lidos na aba {ws.title}")
     amostra = next(iter(itens.items()))
     print(f"  {ws.title}: exemplo {amostra[0]} {amostra[1][0][:40]} {amostra[1][1]} GO={amostra[1][2].get('GO')}")
     return itens
