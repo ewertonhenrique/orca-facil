@@ -1,0 +1,61 @@
+name: Atualizar SINAPI e publicar site
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # A Caixa publica a SINAPI por volta do dia 10 de cada mês; o robô tenta em três dias
+    - cron: "0 10 12,20,28 * *"
+  workflow_dispatch:
+    inputs:
+      mes:
+        description: "Forçar um mês (AAAA-MM). Deixe vazio para pegar o mais recente."
+        required: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl==3.1.5
+      - name: Baixar SINAPI
+        run: python scripts/atualizar_sinapi.py ${{ github.event.inputs.mes }}
+      - name: Salvar no repositório
+        run: |
+          git config user.name "robo-sinapi"
+          git config user.email "robo-sinapi@users.noreply.github.com"
+          git add dados/sinapi
+          if git diff --cached --quiet; then echo "Sem mudanças"; exit 0; fi
+          git commit -m "SINAPI $(python -c 'import json;print(json.load(open("dados/sinapi/meta.json"))["referencia"])')"
+          git push
+
+  publicar:
+    needs: atualizar
+    if: always() && (needs.atualizar.result == 'success' || needs.atualizar.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4

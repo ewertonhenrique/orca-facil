@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orça Fácil Residencial</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 8 8 2l7 6v7H1z%22 fill=%22%23b8611d%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: régua de etapas à esquerda (vira faixa no topo no celular), ficha de preenchimento ao centro, painel "por quê" ao lado */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#1d2622; --muted:#5b6862; --line:#d9dedb;
+  --accent:#b8611d; --accent-soft:#f6e6d6; --steel:#2f5d62; --steel-soft:#dceae9;
+  --ok:#2e7d4f; --warn:#a36a00; --warn-soft:#fbefd2;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1d2421; --ink:#e6ebe8; --muted:#9aa8a1; --line:#33403b;
+  --accent:#e08a44; --accent-soft:#3a2a1c; --steel:#7fb5ba; --steel-soft:#1f3436;
+  --ok:#6cc58f; --warn:#e3b04d; --warn-soft:#3a3020; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1d2421; --ink:#e6ebe8; --muted:#9aa8a1; --line:#33403b;
+  --accent:#e08a44; --accent-soft:#3a2a1c; --steel:#7fb5ba; --steel-soft:#1f3436;
+  --ok:#6cc58f; --warn:#e3b04d; --warn-soft:#3a3020; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+header.top h1{font-family:var(--f-display);font-weight:800;font-size:1.7rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header.top h1 span{color:var(--accent)}
+header.top p{margin:0;color:var(--muted);font-size:.95rem}
+.grid{display:grid;grid-template-columns:230px minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:1000px){.grid{grid-template-columns:minmax(0,1fr)}}
+/* régua */
+nav.steps{display:flex;flex-direction:column;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:1000px){nav.steps{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}}
+nav.steps button{all:unset;cursor:pointer;display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:6px;color:var(--muted);font-weight:600;white-space:nowrap}
+nav.steps button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav.steps button .n{font-family:var(--f-mono);font-size:.8rem;width:26px;height:26px;border:1.5px solid var(--line);border-radius:50%;display:grid;place-items:center;flex:none}
+nav.steps button.done .n{background:var(--steel);border-color:var(--steel);color:var(--surface)}
+nav.steps button.cur{background:var(--surface);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
+nav.steps button.cur .n{border-color:var(--accent);color:var(--accent)}
+/* ficha */
+main.sheet{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:24px;min-width:0}
+.eyebrow{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+main h2{font-family:var(--f-display);font-size:1.45rem;margin:4px 0 6px;text-wrap:balance}
+main .lead{color:var(--muted);margin:0 0 20px;max-width:62ch}
+.fields{display:flex;flex-direction:column;gap:18px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lbl{font-weight:700}
+.hint{font-size:.9rem;color:var(--muted);max-width:62ch}
+input[type=text],input[type=number],input[type=month],select{font:inherit;padding:9px 11px;border:1.5px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);max-width:360px;width:100%}
+input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.choice{position:relative;border:1.5px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.choice input{position:absolute;opacity:0;pointer-events:none}
+.choice b{font-family:var(--f-display);font-weight:700}
+.choice small{color:var(--muted);font-size:.86rem;line-height:1.35}
+.choice:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.choice:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.why{all:unset;cursor:pointer;font-size:.85rem;color:var(--steel);font-weight:600;text-decoration:underline;text-underline-offset:3px;width:max-content}
+.why:focus-visible{outline:2px solid var(--accent)}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.72rem;padding:2px 7px;border-radius:99px;background:var(--steel-soft);color:var(--steel);font-weight:600}
+.tag.ex{background:var(--warn-soft);color:var(--warn)}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.92rem;max-width:68ch}
+/* tabela BDI */
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-mono)}
+td input[type=number]{width:90px;padding:5px 8px;text-align:right;font-family:var(--f-mono)}
+.range{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-weight:700;padding:10px 18px;border-radius:6px;border:1.5px solid var(--ink);background:var(--ink);color:var(--surface);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.small{padding:6px 12px;font-size:.9rem;font-weight:600}
+.btn.small.on{background:var(--steel);border-color:var(--steel);color:var(--surface)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:26px;padding-top:18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.result{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:14px 16px;border:1.5px solid var(--steel);border-radius:8px;background:var(--steel-soft)}
+.result .big{font-family:var(--f-display);font-weight:800;font-size:2rem;color:var(--steel);font-variant-numeric:tabular-nums}
+.status{font-weight:700}
+.status.ok{color:var(--ok)} .status.warn{color:var(--warn)}
+.formula{font-family:var(--f-mono);font-size:.82rem;color:var(--muted);overflow-x:auto;white-space:nowrap;padding:8px 0}
+/* etapas */
+.stages{display:flex;flex-direction:column;gap:8px}
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;align-items:start}
+.stage input{margin-top:5px;width:18px;height:18px;accent-color:var(--accent)}
+.stage b{font-weight:700}
+.stage small{grid-column:2;color:var(--muted);font-size:.88rem}
+.stage .code{font-family:var(--f-mono);color:var(--accent);font-size:.85rem;margin-right:6px}
+/* painel lateral */
+aside.help{display:flex;flex-direction:column;gap:14px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:1000px){aside.help{position:static}}
+.helpcard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+.helpcard h3{font-family:var(--f-display);font-size:1rem;margin:0 0 6px;display:flex;gap:8px;align-items:center}
+.helpcard p{margin:0 0 8px;font-size:.93rem}
+.helpcard p:last-child{margin-bottom:0}
+.helpcard .q{font-weight:700;color:var(--steel)}
+.summary dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0}
+.summary dt{color:var(--muted);font-size:.9rem}
+.summary dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+.summary-block{display:flex;flex-direction:column;gap:14px}
+.summary-block h4{margin:0;font-family:var(--f-display);font-size:1rem;border-bottom:1px solid var(--line);padding-bottom:4px}
+textarea{width:100%;min-height:160px;font-family:var(--f-mono);font-size:.8rem;border:1.5px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);padding:10px}
+.toast{font-size:.9rem;color:var(--ok);font-weight:600}
+.choice .ico svg{width:72px;height:46px;display:block}
+svg .s{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
+svg .f{fill:var(--steel-soft);stroke:var(--ink);stroke-width:1.5}
+svg .a{fill:var(--accent)} svg .w{fill:var(--surface);stroke:var(--steel);stroke-width:1.2}
+.quick{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 14px;border:1.5px dashed var(--accent);border-radius:8px;margin-bottom:20px;font-size:.95rem}
+.viz{display:flex;flex-direction:column;gap:8px}
+.bar{display:flex;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.seg{display:flex;align-items:center;padding:0 8px;font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;color:var(--surface)}
+.seg.sal,.sw.sal{background:var(--steel)} .seg.enc,.sw.enc{background:var(--accent)}
+.seg.cd,.sw.cd{background:var(--steel)} .seg.adm,.sw.adm{background:#7c9a94} .seg.df,.sw.df{background:#c9a26b} .seg.lu,.sw.lu{background:var(--ok)} .seg.tr,.sw.tr{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px}
+.vizcap{font-size:.9rem;color:var(--muted)}
+svg.recipe{width:100%;height:auto;margin:4px 0 8px}
+svg.recipe .wall rect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1}
+svg.recipe .m{font-family:var(--f-mono);font-size:11px;fill:var(--ink)} svg.recipe .t{font-family:var(--f-body);font-size:12px;font-weight:700;fill:var(--steel)}
+svg.section{width:100%;height:auto;margin:0 0 16px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+svg.section .soil{fill:var(--line)} svg.section .c3{fill:var(--muted)} svg.section .c4{fill:var(--steel)}
+svg.section .c5{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1} svg.section .c12{fill:var(--surface);stroke:var(--steel);stroke-width:2} svg.section .c6{fill:var(--accent)}
+svg.section .lbl text{font-family:var(--f-mono);font-size:12px;font-weight:600;fill:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.choice,nav.steps button{transition:background .15s,border-color .15s}}
+.baseinfo{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.9rem}
+header.top a{color:var(--steel);font-weight:700}
+body{margin:0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Orça Fácil <span>Residencial</span></h1>
+    <p>Assistente para montar a base de um orçamento de obra, passo a passo e com explicação em cada campo. <a href="busca.html">Consultar a base SINAPI</a></p>
+  </header>
+
+  <div class="grid">
+    <nav class="steps" id="stepsNav" aria-label="Etapas do assistente"></nav>
+    <main class="sheet" id="sheet" aria-live="polite"></main>
+    <aside class="help" id="help"></aside>
+  </div>
+</div>
+
+<script>
+(function(){
+const UFS=["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+const BASES_EST={SE:"ORSE",CE:"SEINFRA-CE",RJ:"EMOP",MG:"SUDECAP (BH)",GO:"GOINFRA",SP:"CPOS / SIURB"};
+// Faixas do Acórdão TCU 2622/2013 para "Construção de edifícios" (1º quartil, médio, 3º quartil)
+const BDI_REF={
+  ac:{nome:"Administração central",q:[3.00,4.00,5.50],why:"Custos do escritório da construtora que não ficam na obra: contador, aluguel, telefone, engenheiro que acompanha várias obras. Cada obra paga uma parte."},
+  sg:{nome:"Seguro e garantia",q:[0.80,0.80,1.00],why:"Seguro da obra (incêndio, roubo, responsabilidade civil) e garantias exigidas no contrato."},
+  r:{nome:"Risco",q:[0.97,1.27,1.27],why:"Reserva para imprevistos que o orçamento não previu: chuva, solo pior que o esperado, perda de material."},
+  df:{nome:"Despesas financeiras",q:[0.59,1.23,1.39],why:"Custo de bancar a obra com dinheiro próprio entre o gasto e o recebimento (juros, inflação do período)."},
+  l:{nome:"Lucro",q:[6.16,7.40,8.96],why:"A remuneração da empresa pelo trabalho. É o que sobra depois de pagar tudo."}
+};
+const ETAPAS={
+  base:[
+    ["01","Serviços preliminares","Placa de obra, ligação provisória de água e luz, barracão, limpeza do terreno e locação da obra (gabarito)."],
+    ["02","Movimento de terra","Escavações, aterro e compactação para nivelar o terreno e abrir as valas da fundação."],
+    ["03","Fundações","Sapatas, estacas, blocos e vigas baldrame: a parte que leva o peso da casa para o solo."],
+    ["04","Estrutura","Pilares, vigas e lajes de concreto armado (fôrma, armação e concreto)."],
+    ["05","Alvenaria e vedações","Paredes de bloco cerâmico ou de concreto, vergas e contravergas."],
+    ["06","Cobertura","Estrutura do telhado (madeira ou metálica), telhas, rufos e calhas."],
+    ["07","Impermeabilização","Proteção contra umidade no baldrame, áreas molhadas e lajes expostas."],
+    ["08","Instalações hidrossanitárias","Água fria e quente, esgoto, águas pluviais, louças e metais."],
+    ["09","Instalações elétricas","Quadro, eletrodutos, fiação, tomadas, interruptores e entrada de energia."],
+    ["10","Revestimentos","Chapisco, emboço, reboco, cerâmicas e porcelanatos em paredes."],
+    ["11","Pisos","Contrapiso, piso cerâmico ou porcelanato, rodapés e soleiras."],
+    ["12","Esquadrias","Portas, janelas, ferragens e vidros."],
+    ["13","Pintura","Massa, selador e tinta nas paredes, tetos e esquadrias."],
+    ["14","Serviços complementares","Calçada, muro, paisagismo e limpeza final da obra."]
+  ],
+  sobrado:[["E1","Escada","Escada de concreto ou metálica entre os pavimentos, com corrimão e guarda-corpo."]],
+  predio:[["E1","Escada e circulação","Escadas, halls e áreas comuns."],["E2","Elevador","Fornecimento e instalação do elevador e casa de máquinas."],["E3","Prevenção de incêndio","Hidrantes, extintores, sinalização e iluminação de emergência exigidos pelos bombeiros."],["E4","Áreas comuns","Portaria, garagem, salão de festas e paisagismo do condomínio."]]
+};
+
+// Estado inicial: exemplo marcado como exemplo
+const DEFAULT={
+  exemplo:true,
+  nome:"Casa Térrea – Exemplo", cliente:"", cidade:"Goiânia", tipo:"terrea", area:120, padrao:"normal",
+  uf:"GO", mes:"2026-09", base:"SINAPI", desonerado:"nao",
+  bdi:{ac:4.00,sg:0.80,r:1.27,df:1.23,l:7.40}, preset:1,
+  pis:0.65, cofins:3.00, issAliq:3.00, issBase:50, cprb:2.70,
+  encargos:null, etapas:null
+};
+let S=load()||structuredClone(DEFAULT);
+let META=null;
+let cur=0;
+
+function load(){try{const v=localStorage.getItem("orcafacil.rascunho");return v?JSON.parse(v):null}catch(e){return null}}
+function save(){try{localStorage.setItem("orcafacil.rascunho",JSON.stringify(S));return true}catch(e){return false}}
+const fmt=(n,d=2)=>Number(n).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function encargosSugeridos(){return S.desonerado==="sim"?{h:84.5,m:47.0}:{h:113.0,m:71.0}}
+function encargos(){return S.encargos||encargosSugeridos()}
+function etapasLista(){
+  let l=[...ETAPAS.base];
+  if(S.tipo==="sobrado")l=l.concat(ETAPAS.sobrado);
+  if(S.tipo==="predio")l=l.concat(ETAPAS.predio);
+  return l;
+}
+function etapasSel(){const l=etapasLista();return S.etapas?l.filter(e=>S.etapas.includes(e[1])):l}
+function issEf(){return S.issAliq*S.issBase/100}
+function tributos(){return S.pis+S.cofins+issEf()+(S.desonerado==="sim"?S.cprb:0)}
+function calcBDI(){
+  const b=S.bdi,I=tributos()/100;
+  return (((1+(b.ac+b.sg+b.r)/100)*(1+b.df/100)*(1+b.l/100))/(1-I)-1)*100;
+}
+// faixa TCU do BDI total para edificações (sem desoneração)
+const BDI_FAIXA=[20.34,22.12,25.00];
+
+const STEPS=[
+ {t:"A obra",render:stepObra,help:helpObra},
+ {t:"Local e base",render:stepBase,help:helpBase},
+ {t:"Desoneração",render:stepDeson,help:helpDeson},
+ {t:"Encargos sociais",render:stepEnc,help:helpEnc},
+ {t:"BDI",render:stepBDI,help:helpBDI},
+ {t:"Etapas da obra",render:stepEtapas,help:helpEtapas},
+ {t:"Resumo",render:stepResumo,help:helpResumo}
+];
+
+function renderNav(){
+  const nav=document.getElementById("stepsNav");
+  nav.innerHTML=STEPS.map((s,i)=>`<button type="button" data-i="${i}" class="${i===cur?"cur":""} ${i<cur?"done":""}" ${i===cur?'aria-current="step"':""}><span class="n">${i<cur?"✓":i+1}</span>${s.t}</button>`).join("");
+  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>go(+b.dataset.i));
+}
+function go(i){cur=Math.max(0,Math.min(STEPS.length-1,i));render();window.scrollTo({top:0,behavior:"smooth"})}
+function render(){
+  renderNav();
+  const st=STEPS[cur];
+  document.getElementById("sheet").innerHTML=
+    `<div class="eyebrow">Passo ${cur+1} de ${STEPS.length}${S.exemplo?' · <span class="tag ex">dados de exemplo</span>':""}</div>`+
+    st.render()+
+    `<div class="nav">${cur>0?`<button class="btn ghost" id="prev">Voltar</button>`:"<span></span>"}${cur<STEPS.length-1?`<button class="btn" id="next">Próximo: ${STEPS[cur+1].t}</button>`:""}</div>`;
+  document.getElementById("help").innerHTML=st.help();
+  const p=document.getElementById("prev"),n=document.getElementById("next");
+  if(p)p.onclick=()=>go(cur-1); if(n)n.onclick=()=>go(cur+1);
+  bind();
+}
+function bind(){
+  document.querySelectorAll("[data-k]").forEach(el=>{
+    const k=el.dataset.k;
+    const ev=el.type==="radio"||el.tagName==="SELECT"||el.type==="checkbox"?"change":"input";
+    el.addEventListener(ev,()=>{
+      let v=el.type==="number"?parseFloat(el.value.replace(",","."))||0:el.value;
+      if(k.startsWith("bdi.")){S.bdi[k.slice(4)]=v;S.preset=null}
+      else if(k.startsWith("enc.")){S.encargos={...encargos(),[k.slice(4)]:v}}
+      else S[k]=v;
+      if(k==="desonerado")S.encargos=null;
+      if(k==="tipo")S.etapas=null;
+      S.exemplo=false; save();
+      if(el.dataset.rerender!==undefined)render(); else liveUpdate();
+    });
+  });
+  document.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>{
+    const q=+b.dataset.preset; for(const k in BDI_REF)S.bdi[k]=BDI_REF[k].q[q]; S.preset=q; S.exemplo=false; save(); render();
+  });
+  document.querySelectorAll("[data-etapa]").forEach(c=>c.onchange=()=>{
+    const all=[...document.querySelectorAll("[data-etapa]")]; S.etapas=all.filter(x=>x.checked).map(x=>x.dataset.etapa); S.exemplo=false; save(); liveUpdate();
+  });
+  document.querySelectorAll("[data-why]").forEach(b=>b.onclick=()=>{
+    const t=document.getElementById(b.dataset.why); if(t){t.hidden=!t.hidden; b.setAttribute("aria-expanded",String(!t.hidden))}
+  });
+  const q=document.getElementById("quickGo"); if(q)q.onclick=()=>{
+    for(const k in BDI_REF)S.bdi[k]=BDI_REF[k].q[1]; S.preset=1; S.encargos=null; S.etapas=null;
+    if(!S.base)S.base="SINAPI"; S.exemplo=false; save(); go(STEPS.length-1);
+  };
+  const r=document.getElementById("reset"); if(r)r.onclick=()=>{
+    const c=document.getElementById("resetConfirm"); c.hidden=false;
+  };
+  const rc=document.getElementById("resetYes"); if(rc)rc.onclick=()=>{S=structuredClone(DEFAULT);S.exemplo=false;S.nome="";S.cidade="";save();go(0)};
+  const rn=document.getElementById("resetNo"); if(rn)rn.onclick=()=>document.getElementById("resetConfirm").hidden=true;
+  const cp=document.getElementById("copy"); if(cp)cp.onclick=()=>{
+    const ta=document.getElementById("resumoTxt"),msg=document.getElementById("copyMsg");
+    navigator.clipboard.writeText(ta.value).then(()=>{msg.textContent="Resumo copiado."}).catch(()=>{ta.select();msg.textContent="Texto selecionado. Use Ctrl+C para copiar."});
+  };
+}
+function liveUpdate(){
+  const b=document.getElementById("bdiOut"); if(b)b.innerHTML=bdiResult();
+  const bv=document.getElementById("bdiViz"); if(bv)bv.innerHTML=bdiViz();
+  const ev=document.getElementById("encViz"); if(ev)ev.innerHTML=encViz();
+  const t=document.getElementById("tribOut"); if(t)t.textContent=fmt(tributos())+"%";
+  const ie=document.getElementById("issEf"); if(ie)ie.textContent=fmt(issEf())+"%";
+  const c=document.getElementById("etCount"); if(c)c.textContent=etapasSel().length;
+  document.getElementById("help").innerHTML=STEPS[cur].help(); bindHelp();
+}
+function bindHelp(){}
+
+const radio=(k,v,title,sub,rr,ico)=>`<label class="choice"><input type="radio" name="${k}" value="${v}" data-k="${k}" ${rr?"data-rerender":""} ${S[k]===v?"checked":""}>${ico?`<span class="ico">${ico}</span>`:""}<b>${title}</b><small>${sub}</small></label>`;
+const ICO={
+ terrea:`<svg viewBox="0 0 80 50" aria-hidden="true"><path d="M8 26 40 6l32 20" class="s"/><rect x="14" y="24" width="52" height="22" class="f"/><rect x="34" y="32" width="10" height="14" class="a"/><rect x="20" y="30" width="9" height="8" class="w"/><rect x="51" y="30" width="9" height="8" class="w"/><line x1="2" y1="46" x2="78" y2="46" class="s"/></svg>`,
+ sobrado:`<svg viewBox="0 0 80 50" aria-hidden="true"><path d="M14 16 40 2l26 14" class="s"/><rect x="18" y="14" width="44" height="32" class="f"/><line x1="18" y1="30" x2="62" y2="30" class="s"/><rect x="35" y="35" width="9" height="11" class="a"/><rect x="23" y="19" width="8" height="7" class="w"/><rect x="49" y="19" width="8" height="7" class="w"/><rect x="49" y="35" width="8" height="7" class="w"/><line x1="2" y1="46" x2="78" y2="46" class="s"/></svg>`,
+ predio:`<svg viewBox="0 0 80 50" aria-hidden="true"><rect x="24" y="2" width="32" height="44" class="f"/>${[6,14,22,30].map(y=>`<rect x="29" y="${y}" width="7" height="5" class="w"/><rect x="44" y="${y}" width="7" height="5" class="w"/>`).join("")}<rect x="36" y="38" width="8" height="8" class="a"/><line x1="2" y1="46" x2="78" y2="46" class="s"/></svg>`
+};
+const why=(id,txt)=>`<button type="button" class="why" data-why="${id}" aria-expanded="false">Por que perguntamos isso?</button><div class="hint" id="${id}" hidden>${txt}</div>`;
+
+/* ---------- PASSO 1 ---------- */
+function stepObra(){return `
+ <h2>Vamos começar pela obra</h2>
+ <p class="lead">Informações básicas para identificar o orçamento. Elas também ajudam o sistema a sugerir as etapas certas lá na frente.</p>
+ <div class="quick"><div><b>Com pressa?</b> Preencha esta tela e use os valores recomendados em todo o resto. Você pode revisar qualquer passo depois.</div><button type="button" class="btn small" id="quickGo">Usar recomendados e ir ao resumo</button></div>
+ <div class="fields">
+  <div class="field"><label for="f-nome">Nome do orçamento</label><input id="f-nome" type="text" data-k="nome" value="${esc(S.nome)}" placeholder="Ex.: Residência Silva"><span class="hint">Use algo que você reconheça depois, como o nome do cliente ou o endereço.</span></div>
+  <div class="row2">
+   <div class="field"><label for="f-cliente">Cliente (opcional)</label><input id="f-cliente" type="text" data-k="cliente" value="${esc(S.cliente)}"></div>
+   <div class="field"><label for="f-cidade">Cidade da obra</label><input id="f-cidade" type="text" data-k="cidade" value="${esc(S.cidade)}"></div>
+  </div>
+  <div class="field"><span class="lbl">Tipo de obra</span>
+   <div class="choices">
+    ${radio("tipo","terrea","Casa térrea","Um pavimento. O caso mais comum.",true,ICO.terrea)}
+    ${radio("tipo","sobrado","Sobrado","Dois ou mais pavimentos, com escada.",true,ICO.sobrado)}
+    ${radio("tipo","predio","Edifício residencial","Vários apartamentos, áreas comuns e elevador.",true,ICO.predio)}
+   </div>
+   ${why("w-tipo","Cada tipo tem etapas diferentes. Um sobrado precisa de escada; um prédio precisa de elevador e sistema de incêndio. O sistema já monta a lista de etapas certa para você.")}
+  </div>
+  <div class="row2">
+   <div class="field"><label for="f-area">Área construída (m²)</label><input id="f-area" type="number" min="0" step="1" data-k="area" value="${S.area}"><span class="hint">Soma da área de todos os pavimentos. Está no seu projeto.</span></div>
+   <div class="field"><label for="f-padrao">Padrão de acabamento</label>
+    <select id="f-padrao" data-k="padrao">
+     <option value="baixo" ${S.padrao==="baixo"?"selected":""}>Baixo (popular)</option>
+     <option value="normal" ${S.padrao==="normal"?"selected":""}>Normal</option>
+     <option value="alto" ${S.padrao==="alto"?"selected":""}>Alto</option>
+    </select><span class="hint">Serve para conferir no final se o custo por m² está coerente.</span></div>
+  </div>
+ </div>`}
+function helpObra(){return `
+ <div class="helpcard"><h3>Como funciona</h3>
+  <p>Um orçamento de obra tem sempre a mesma lógica:</p>
+  <p><span class="q">Quantidade × Preço unitário = Custo</span>. Você já tem as quantidades no seu projeto. O preço unitário vem de uma <b>base de preços</b>, como a SINAPI.</p>
+  <p>Depois, sobre o custo, aplicamos o <b>BDI</b> (despesas indiretas e lucro) para chegar ao <b>preço de venda</b>.</p>
+  <p>Este assistente prepara tudo isso antes de você lançar os serviços.</p></div>
+ <div class="helpcard"><h3>Dica</h3><p>Pode preencher sem medo. Tudo fica salvo neste navegador e você pode voltar a qualquer passo pela régua à esquerda.</p></div>`}
+
+/* ---------- PASSO 2 ---------- */
+function stepBase(){
+ const est=BASES_EST[S.uf];
+ return `
+ <h2>Onde é a obra e de quando são os preços</h2>
+ <p class="lead">Os preços de material e mão de obra mudam de estado para estado e de mês para mês. Por isso a base de preços precisa saber o local e a data.</p>
+ <div class="fields">
+  <div class="row2">
+   <div class="field"><label for="f-uf">Estado (UF)</label><select id="f-uf" data-k="uf" data-rerender>${UFS.map(u=>`<option ${u===S.uf?"selected":""}>${u}</option>`).join("")}</select></div>
+   <div class="field"><label for="f-mes">Mês de referência</label><input id="f-mes" type="month" data-k="mes" value="${S.mes}"><span class="hint">Use o mês mais recente publicado. A SINAPI costuma sair com cerca de um mês de atraso.</span></div>
+  </div>
+  <div class="field"><span class="lbl">Base de preços principal</span>
+   <div class="choices">
+    ${radio("base","SINAPI","SINAPI","Caixa / IBGE. Gratuita, nacional, atualizada todo mês. Recomendada.",true)}
+    ${radio("base","ESTADUAL",est&&!est.includes("use")?est:"Base estadual",est&&!est.includes("use")?"Base do seu estado, útil para serviços que a SINAPI não tem.":"Seu estado não tem base própria muito usada. Prefira a SINAPI.",true)}
+    ${radio("base","PROPRIA","Planilha própria","Importe preços de fornecedores ou de uma base paga (TCPO, SBC).",true)}
+   </div>
+   ${why("w-base","A base de preços é uma tabela pública com o custo de cada serviço já calculado, por exemplo \"alvenaria de bloco cerâmico 14 cm, por m²\". Ela já inclui o material, a mão de obra e a perda. Usar uma base conhecida dá credibilidade ao seu orçamento e evita esquecer itens.")}
+  </div>
+  <div class="baseinfo">${META&&META.referencia?`<span class="tag">SINAPI no site: ${mesExt(META.referencia)}</span><span class="hint">Atualizada automaticamente em ${new Date(META.atualizado_em).toLocaleDateString("pt-BR")}.</span>`:`<span class="tag ex">SINAPI ainda não baixada</span><span class="hint">O robô mensal baixa a base mais recente da Caixa.</span>`}</div>
+  <div class="note">Você pode misturar bases no mesmo orçamento. A base escolhida aqui é só a primeira onde o sistema vai procurar.</div>
+ </div>`}
+function helpBase(){return `
+ <div class="helpcard"><h3>O que é uma composição <span class="tag">termo técnico</span></h3>
+  <p>É a "receita" de um serviço. Exemplo para 1 m² de alvenaria:</p>
+  <svg class="recipe" viewBox="0 0 260 120" role="img" aria-label="Composição de 1 m² de alvenaria">
+   <g class="wall">${[0,1,2,3].map(r=>[0,1,2].map(c=>`<rect x="${8+c*30+(r%2?15:0)}" y="${10+r*18}" width="28" height="16" rx="1"/>`).join("")).join("")}</g>
+   <text x="60" y="104" class="t">1 m² de parede</text>
+   <text x="130" y="22" class="m">13,5 blocos</text><text x="130" y="42" class="m">0,012 m³ argamassa</text>
+   <text x="130" y="62" class="m">0,85 h pedreiro</text><text x="130" y="82" class="m">0,42 h servente</text>
+   <text x="130" y="104" class="t">= R$ por m²</text></svg>
+  <p>A base multiplica cada item pelo preço do mês e entrega o custo do m² pronto.</p></div>
+ <div class="helpcard"><h3>Bases mais usadas</h3>
+  <p><b>SINAPI</b> nacional, obrigatória em obras com dinheiro público federal.</p>
+  <p><b>ORSE</b> (SE), <b>SEINFRA</b> (CE), <b>EMOP</b> (RJ), <b>SUDECAP</b> (MG), <b>GOINFRA</b> (GO), <b>CPOS/SIURB</b> (SP): bases estaduais gratuitas.</p>
+  <p><b>TCPO</b> e <b>SBC</b>: pagas, com mais detalhes de acabamento.</p></div>`}
+
+/* ---------- PASSO 3 ---------- */
+function stepDeson(){return `
+ <h2>Desonerado ou não desonerado?</h2>
+ <p class="lead">A SINAPI publica dois preços para cada serviço. A diferença está em como a empresa paga o INSS dos funcionários.</p>
+ <div class="fields">
+  <div class="choices">
+   ${radio("desonerado","nao","Não desonerado","A empresa paga 20% de INSS sobre a folha. A mão de obra fica mais cara, mas não há imposto extra no BDI.",true)}
+   ${radio("desonerado","sim","Desonerado","A empresa paga um percentual sobre o faturamento (CPRB) em vez dos 20%. A mão de obra fica mais barata e a CPRB entra no BDI.",true)}
+  </div>
+  <div class="note"><b>Na dúvida, escolha "Não desonerado".</b> É o mais comum em obras particulares e em empresas do Simples Nacional. Se você tem uma construtora com contador, pergunte a ele qual regime a empresa usa.</div>
+  <div class="note">A desoneração está sendo extinta aos poucos (Lei 14.973/2024) até 2028. Em 2026 a CPRB da construção é de 2,7% somada a 10% de INSS sobre a folha. O sistema já usa esse valor, que você pode ajustar no passo do BDI.</div>
+ </div>`}
+function helpDeson(){return `
+ <div class="helpcard"><h3>Por que isso importa</h3>
+  <p>A escolha muda dois números do orçamento ao mesmo tempo: os <b>encargos sociais</b> (próximo passo) e os <b>tributos do BDI</b>.</p>
+  <p>Escolher um e usar os preços do outro é um erro comum que distorce o orçamento em vários por cento. Por isso o sistema amarra as duas coisas.</p></div>`}
+
+/* ---------- PASSO 4 ---------- */
+function stepEnc(){const e=encargos(),s=encargosSugeridos();return `
+ <h2>Encargos sociais</h2>
+ <p class="lead">Além do salário, a empresa paga férias, 13º, FGTS, INSS, descanso remunerado e outros direitos. Os encargos são esse custo extra, em porcentagem do salário.</p>
+ <div class="fields">
+  <div class="result"><span>Para cada R$ 100,00 de salário de um pedreiro, a empresa gasta na verdade</span><span class="big">R$ ${fmt(100+e.h)}</span></div>
+  <div id="encViz">${encViz()}</div>
+  <div class="row2">
+   <div class="field"><label for="f-eh">Horista (%)</label><input id="f-eh" type="number" step="0.01" data-k="enc.h" value="${e.h}"><span class="hint">Pedreiros, serventes, eletricistas: quem recebe por hora. É o que mais pesa na obra.</span></div>
+   <div class="field"><label for="f-em">Mensalista (%)</label><input id="f-em" type="number" step="0.01" data-k="enc.m" value="${e.m}"><span class="hint">Engenheiro, mestre de obras, almoxarife: quem recebe por mês.</span></div>
+  </div>
+  <div class="note">Os valores sugeridos (${fmt(s.h)}% e ${fmt(s.m)}%) são típicos da SINAPI para o regime ${S.desonerado==="sim"?"desonerado":"não desonerado"}. O valor exato do seu estado e mês sai na planilha de encargos da SINAPI. Quando a base for carregada (etapa 2 do projeto), o sistema preenche sozinho.</div>
+  ${why("w-enc","Se você usar os preços prontos da SINAPI, os encargos já estão embutidos neles e você só precisa conferir. Este campo é usado quando você cria composições próprias ou usa salários pagos de verdade na sua região.")}
+ </div>`}
+function encViz(){const e=encargos(),tot=100+e.h,w=v=>(v/Math.max(tot,1)*100).toFixed(2);return `
+ <div class="viz" role="img" aria-label="Salário ${fmt(100,0)} mais encargos ${fmt(e.h)}">
+  <div class="bar"><span class="seg sal" style="width:${w(100)}%">Salário R$ 100</span><span class="seg enc" style="width:${w(e.h)}%">Encargos R$ ${fmt(e.h,0)}</span></div>
+  <div class="vizcap">Férias, 13º, FGTS, INSS e descansos fazem o custo real ser quase o dobro do salário.</div></div>`}
+function helpEnc(){return `
+ <div class="helpcard"><h3>O que entra nos encargos</h3>
+  <p><b>Grupo A</b>: INSS, FGTS, SESI, SENAI, salário-educação, seguro de acidente.</p>
+  <p><b>Grupo B</b>: férias, 13º, feriados, descanso semanal, faltas justificadas.</p>
+  <p><b>Grupo C</b>: aviso prévio e multa do FGTS na demissão.</p>
+  <p><b>Grupo D</b>: reflexos de um grupo sobre o outro.</p></div>`}
+
+/* ---------- PASSO 5 ---------- */
+function bdiResult(){
+ const v=calcBDI(); let cls="ok",txt="Dentro da faixa do TCU para edificações";
+ const desc=S.desonerado==="sim";
+ if(!desc&&v<BDI_FAIXA[0]){cls="warn";txt="Abaixo da faixa usual. Confira se não esqueceu nada"}
+ if(!desc&&v>BDI_FAIXA[2]){cls="warn";txt="Acima da faixa usual. Pode ser difícil justificar"}
+ if(desc)txt="Com desoneração o BDI fica naturalmente mais alto, por causa da CPRB";
+ return `<span>BDI calculado</span><span class="big">${fmt(v)}%</span><span class="status ${cls}">${txt}</span>`;
+}
+function stepBDI(){const b=S.bdi;return `
+ <h2>BDI: o que vai além do custo direto</h2>
+ <p class="lead">O custo direto é o que fica na obra: material e mão de obra. O BDI soma o resto, que é escritório, impostos, risco e lucro. Preço de venda = custo direto × (1 + BDI).</p>
+ <div class="fields">
+  <div class="field"><span class="lbl">Comece por um ponto de partida</span>
+   <div class="presets">
+    <button type="button" class="btn small ${S.preset===0?"on":""}" data-preset="0">Enxuto (1º quartil)</button>
+    <button type="button" class="btn small ${S.preset===1?"on":""}" data-preset="1">Médio (recomendado)</button>
+    <button type="button" class="btn small ${S.preset===2?"on":""}" data-preset="2">Folgado (3º quartil)</button>
+   </div>
+   <span class="hint">Valores do Acórdão 2622/2013 do TCU para construção de edifícios, a referência mais usada no Brasil.</span>
+  </div>
+  <div class="tblwrap"><table>
+   <thead><tr><th>Item</th><th class="num">Seu valor (%)</th><th class="num">Faixa TCU</th></tr></thead>
+   <tbody>
+   ${Object.entries(BDI_REF).map(([k,r])=>`<tr><td><b>${r.nome}</b><br><span class="hint">${r.why}</span></td><td class="num"><input type="number" step="0.01" aria-label="${r.nome}" data-k="bdi.${k}" value="${b[k]}"></td><td class="num range">${fmt(r.q[0])} a ${fmt(r.q[2])}</td></tr>`).join("")}
+   </tbody>
+  </table></div>
+  <div class="field"><span class="lbl">Tributos sobre o faturamento</span>
+   <div class="tblwrap"><table><tbody>
+    <tr><td>PIS<br><span class="hint">Federal, regime de lucro presumido.</span></td><td class="num"><input type="number" step="0.01" aria-label="PIS" data-k="pis" value="${S.pis}"></td></tr>
+    <tr><td>COFINS<br><span class="hint">Federal, regime de lucro presumido.</span></td><td class="num"><input type="number" step="0.01" aria-label="COFINS" data-k="cofins" value="${S.cofins}"></td></tr>
+    <tr><td>ISS: alíquota do município<br><span class="hint">Entre 2% e 5%. Consulte a prefeitura de ${esc(S.cidade)||"sua cidade"}.</span></td><td class="num"><input type="number" step="0.01" aria-label="Alíquota ISS" data-k="issAliq" value="${S.issAliq}"></td></tr>
+    <tr><td>ISS: base de cálculo (% do valor)<br><span class="hint">Muitas prefeituras cobram ISS só sobre a mão de obra, cerca de 40% a 60% do total.</span></td><td class="num"><input type="number" step="1" aria-label="Base ISS" data-k="issBase" value="${S.issBase}"><br><span class="range">ISS efetivo <span id="issEf">${fmt(issEf())}%</span></span></td></tr>
+    ${S.desonerado==="sim"?`<tr><td>CPRB (desoneração)<br><span class="hint">2,7% em 2026, caindo até zerar em 2028.</span></td><td class="num"><input type="number" step="0.01" aria-label="CPRB" data-k="cprb" value="${S.cprb}"></td></tr>`:""}
+    <tr><td><b>Total de tributos</b></td><td class="num"><b id="tribOut">${fmt(tributos())}%</b></td></tr>
+   </tbody></table></div>
+   <div class="note">Empresa do Simples Nacional? Os tributos são outros (uma alíquota única pela faixa de faturamento). Peça ao contador a alíquota efetiva e coloque em COFINS, zerando PIS e ISS.</div>
+  </div>
+  <div class="result" id="bdiOut">${bdiResult()}</div>
+  <div id="bdiViz">${bdiViz()}</div>
+  <div class="formula">BDI = [(1 + AC + S + R + G) × (1 + DF) × (1 + L) ÷ (1 − Tributos)] − 1</div>
+ </div>`}
+function bdiViz(){
+ const b=S.bdi,I=tributos()/100,cd=100;
+ const adm=cd*(b.ac+b.sg+b.r)/100, df=(cd+adm)*b.df/100, lu=(cd+adm+df)*b.l/100, sub=cd+adm+df+lu, pv=sub/(1-I), tr=pv-sub;
+ const parts=[["cd","Custo da obra",cd],["adm","Escritório, seguro e risco",adm],["df","Financeiro",df],["lu","Lucro",lu],["tr","Impostos",tr]];
+ return `<div class="viz" role="img" aria-label="Composição do preço de venda">
+  <div class="vizcap"><b>Para onde vai cada R$ ${fmt(pv)} cobrado do cliente</b> (a cada R$ 100,00 de custo da obra)</div>
+  <div class="bar">${parts.map(p=>`<span class="seg ${p[0]}" style="width:${(p[2]/pv*100).toFixed(2)}%" title="${p[1]}: R$ ${fmt(p[2])}"></span>`).join("")}</div>
+  <div class="legend">${parts.map(p=>`<span><i class="sw ${p[0]}"></i>${p[1]} <b>R$ ${fmt(p[2])}</b></span>`).join("")}</div></div>`}
+function helpBDI(){const v=calcBDI();return `
+ <div class="helpcard"><h3>Na prática</h3>
+  <p>Um serviço que custa <b>R$ 100.000,00</b> na obra seria vendido por</p>
+  <p style="font-family:var(--f-display);font-size:1.4rem;font-weight:800;color:var(--steel);margin:0">R$ ${fmt(100000*(1+v/100))}</p>
+  <p>A diferença de R$ ${fmt(100000*v/100)} cobre o escritório, os impostos, o risco e o seu lucro.</p></div>
+ <div class="helpcard"><h3>Erro comum</h3><p>Somar as porcentagens direto (4 + 0,8 + 1,27 + …). O BDI usa multiplicação porque o lucro e os impostos incidem sobre o valor já aumentado. A fórmula ao lado é a do TCU.</p></div>`}
+
+/* ---------- PASSO 6 ---------- */
+function stepEtapas(){const sel=etapasSel().map(e=>e[1]);return `
+ <h2>Etapas da obra</h2>
+ <p class="lead">O orçamento é organizado em etapas, na ordem em que a obra acontece. Já marcamos as etapas típicas de ${S.tipo==="terrea"?"uma casa térrea":S.tipo==="sobrado"?"um sobrado":"um edifício residencial"}. Desmarque o que não fizer parte do seu projeto.</p>
+ ${etapasSvg()}
+ <div class="stages">
+  ${etapasLista().map(e=>`<label class="stage"><input type="checkbox" data-etapa="${esc(e[1])}" ${sel.includes(e[1])?"checked":""}><span><span class="code">${e[0]}</span><b>${e[1]}</b></span><small>${e[2]}</small></label>`).join("")}
+ </div>
+ <p class="hint" style="margin-top:12px"><b id="etCount">${sel.length}</b> etapas selecionadas.</p>`}
+function etapasSvg(){return `<svg class="section" viewBox="0 0 520 210" role="img" aria-label="Corte de uma casa mostrando a ordem das etapas">
+  <rect x="0" y="168" width="520" height="42" class="soil"/>
+  <rect x="70" y="168" width="34" height="30" class="c3"/><rect x="416" y="168" width="34" height="30" class="c3"/><rect x="70" y="160" width="380" height="10" class="c3"/>
+  <rect x="78" y="70" width="14" height="90" class="c4"/><rect x="428" y="70" width="14" height="90" class="c4"/><rect x="70" y="62" width="380" height="10" class="c4"/>
+  <rect x="92" y="72" width="336" height="88" class="c5"/>
+  <rect x="150" y="96" width="50" height="40" class="c12"/><rect x="300" y="100" width="40" height="60" class="c12"/>
+  <path d="M50 64 260 8 470 64Z" class="c6"/>
+  <g class="lbl">
+   <text x="114" y="192">03 Fundação</text><text x="340" y="88">04 Estrutura</text><text x="210" y="150">05 Alvenaria</text>
+   <text x="232" y="48">06 Cobertura</text><text x="120" y="90">12 Esquadrias</text>
+  </g></svg>`}
+function helpEtapas(){return `
+ <div class="helpcard"><h3>Por que separar em etapas</h3>
+  <p>Fica mais fácil conferir se nada foi esquecido, comparar com outras obras e montar o cronograma, que mostra quanto dinheiro sai em cada mês.</p>
+  <p>Na próxima fase, cada quantitativo do seu projeto vai ser encaixado em uma dessas etapas.</p></div>`}
+
+/* ---------- PASSO 7 ---------- */
+function resumoTexto(){const e=encargos();return [
+ `ORÇAMENTO: ${S.nome||"(sem nome)"}`,
+ `Cliente: ${S.cliente||"-"} | Cidade: ${S.cidade||"-"}/${S.uf}`,
+ `Tipo: ${{terrea:"Casa térrea",sobrado:"Sobrado",predio:"Edifício residencial"}[S.tipo]} | Área: ${fmt(S.area,0)} m² | Padrão: ${S.padrao}`,
+ `Base: ${S.base} ${S.uf} ${S.mes} | ${S.desonerado==="sim"?"Desonerado":"Não desonerado"}`,
+ `Encargos: horista ${fmt(e.h)}% | mensalista ${fmt(e.m)}%`,
+ `BDI: AC ${fmt(S.bdi.ac)} | S+G ${fmt(S.bdi.sg)} | R ${fmt(S.bdi.r)} | DF ${fmt(S.bdi.df)} | L ${fmt(S.bdi.l)} | Tributos ${fmt(tributos())} => BDI ${fmt(calcBDI())}%`,
+ `Etapas: ${etapasSel().map(x=>x[0]+" "+x[1]).join("; ")}`
+].join("\n")}
+function stepResumo(){const e=encargos();return `
+ <h2>Tudo pronto para lançar os serviços</h2>
+ <p class="lead">Estas são as configurações do orçamento. Elas valem para todos os serviços que você lançar a seguir.</p>
+ <div class="summary summary-block">
+  <div><h4>Obra</h4><dl>
+   <dt>Nome</dt><dd>${esc(S.nome)||"—"}</dd><dt>Local</dt><dd>${esc(S.cidade)||"—"} / ${S.uf}</dd>
+   <dt>Tipo</dt><dd>${{terrea:"Casa térrea",sobrado:"Sobrado",predio:"Edifício residencial"}[S.tipo]}, ${fmt(S.area,0)} m², padrão ${S.padrao}</dd></dl></div>
+  <div><h4>Preços</h4><dl>
+   <dt>Base</dt><dd>${S.base==="ESTADUAL"?(BASES_EST[S.uf]||"Estadual"):S.base==="PROPRIA"?"Planilha própria":"SINAPI"} · ${S.mes}</dd>
+   <dt>Regime</dt><dd>${S.desonerado==="sim"?"Desonerado":"Não desonerado"}</dd>
+   <dt>Encargos</dt><dd>Horista ${fmt(e.h)}% · Mensalista ${fmt(e.m)}%</dd></dl></div>
+  <div><h4>BDI</h4><dl><dt>Total</dt><dd>${fmt(calcBDI())}%</dd><dt>Tributos</dt><dd>${fmt(tributos())}%</dd></dl></div>
+  <div><h4>Etapas (${etapasSel().length})</h4><p class="hint" style="margin:0">${etapasSel().map(x=>x[1]).join(", ")}</p></div>
+  <div class="field"><label for="resumoTxt">Resumo em texto</label><textarea id="resumoTxt" readonly>${esc(resumoTexto())}</textarea>
+   <div class="presets"><button type="button" class="btn small" id="copy">Copiar resumo</button><button type="button" class="btn small ghost" id="reset">Começar um orçamento novo</button><span class="toast" id="copyMsg" role="status"></span></div>
+   <div class="note" id="resetConfirm" hidden>Isso apaga o rascunho atual deste navegador. <button type="button" class="btn small" id="resetYes">Apagar e começar</button> <button type="button" class="btn small ghost" id="resetNo">Cancelar</button></div>
+  </div>
+ </div>`}
+function helpResumo(){return `
+ <div class="helpcard"><h3>Próximas fases do projeto</h3>
+  <p><b>Base de preços:</b> a SINAPI do seu estado carregada dentro do site, com busca por descrição.</p>
+  <p><b>Lançar serviços:</b> importar os quantitativos do seu projeto e escolher a composição de cada um.</p>
+  <p><b>Relatórios:</b> planilha sintética e analítica, curva ABC, cronograma e exportação.</p></div>
+ <div class="helpcard"><h3>Seu rascunho</h3><p>Fica salvo só neste navegador. Em outro computador ou janela anônima ele não aparece.</p></div>`}
+
+function mesExt(r){const[a,m]=r.split("-");return ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+m-1]+"/"+a}
+fetch("dados/sinapi/meta.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(m=>{
+  META=m; if(m&&m.referencia&&S.exemplo){S.mes=m.referencia}
+  render();
+}).catch(()=>{});
+render();
+})();
+</script>
+</body>
+</html>
