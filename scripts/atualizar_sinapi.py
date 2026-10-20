@@ -108,6 +108,8 @@ def ler_aba(ws):
         if c in UFS and c not in col_uf:  # primeira coluna com o nome da UF é o custo
             col_uf[c] = i
     if not col_uf:
+        for j, linha in enumerate(ws.iter_rows(min_row=1, max_row=12, values_only=True), 1):
+            aviso(f"{ws.title} linha {j}: " + " | ".join(str(c)[:25] for c in linha[:40] if c is not None))
         raise RuntimeError(f"Colunas de UF não encontradas na aba {ws.title}")
     itens = {}
     for linha in linhas:
