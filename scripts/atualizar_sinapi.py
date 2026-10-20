@@ -138,11 +138,22 @@ def ler_aba(ws):
         sub = cab[i] if i < len(cab) else ""
         if "AS" in sub.split() or sub.startswith("%"):
             col_uf[uf] = i + 1 if "CUSTO" in (cab[i + 1] if i + 1 < len(cab) else "") else i - 1
+    # nas abas de composições o código é um link (=HYPERLINK(...MATCH(87495,...)...)),
+    # e o valor guardado na célula é 0; o código real só aparece na fórmula
+    bruto = getattr(ws.parent, "_bruto", None)
+    formulas = iter(())
+    if bruto:
+        wf = openpyxl.load_workbook(io.BytesIO(bruto), read_only=True, data_only=False)[ws.title]
+        formulas = wf.iter_rows(min_row=i_cab + 2, min_col=col_cod + 1, max_col=col_cod + 1, values_only=True)
     itens = {}
     for linha in ws.iter_rows(min_row=i_cab + 2, values_only=True):
+        formula = next(formulas, (None,))[0]
         if linha is None or len(linha) <= col_desc:
             continue
         cod = linha[col_cod]
+        if (cod in (None, 0, "0", "")) and isinstance(formula, str):
+            m = re.search(r"MATCH\(\s*\"?([0-9]+)", formula)
+            cod = m.group(1) if m else None
         if cod is None or str(cod).strip() == "":
             continue
         cod = str(int(cod)) if isinstance(cod, float) else str(cod).strip()
