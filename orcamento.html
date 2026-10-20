@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 8 8 2l7 6v7H1z%22 fill=%22%23b8611d%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* Layout: faixa de resumo fixa no topo da coluna, importação à esquerda, etapas com itens à direita */
 :root{
@@ -117,10 +118,10 @@ td input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);margin
         <h2>Importar quantitativos</h2>
         <label class="drop" id="drop" for="fileIn">
           <svg viewBox="0 0 48 48" aria-hidden="true"><path class="p" d="M12 4h17l9 9v31H12z"/><path class="p" d="M29 4v9h9"/><rect class="a" x="17" y="24" width="16" height="3" rx="1"/><rect class="a" x="17" y="31" width="12" height="3" rx="1"/></svg>
-          <b>Arraste os PDFs do CYPECAD aqui</b>
-          <span class="hint">ou clique para escolher. Use "Quantidades da obra" e "Quantidades de armadura por diâmetro".</span>
+          <b>Arraste seus quantitativos aqui</b>
+          <span class="hint">ou clique para escolher. Aceita PDFs do CYPECAD e qualquer planilha Excel ou CSV com descrição, unidade e quantidade (Revit, ArchiCAD, SketchUp, feita à mão).</span>
         </label>
-        <input type="file" id="fileIn" accept=".pdf,application/pdf" multiple hidden>
+        <input type="file" id="fileIn" accept=".pdf,.xlsx,.xls,.csv,application/pdf" multiple hidden>
         <div class="files" id="files"></div>
       </section>
       <section class="card totais" id="totais"></section>
@@ -168,10 +169,15 @@ async function carregarBase(){
   try{META=await (await fetch("dados/sinapi/meta.json",{cache:"no-store"})).json()}catch(e){}
   try{
     BASE=await (await fetch(`dados/sinapi/${UF}.json`)).json();
-    BASE.composicoes.forEach(c=>{c.n=norm(c[1]);MAPA[c[0]]=c});
+    BASE.composicoes.forEach(c=>{c.n=norm(c[1]);c.k=chave(c[1]);MAPA[c[0]]=c});
   }catch(e){BASE=null}
 }
 const preco=c=>c?(c[REG]??0):0;
+// texto para comparar descrições: sem acentos e pontuação, número colado na unidade ("25 MM" = "25MM")
+const chave=t=>" "+norm(t).replace(/[^A-Z0-9\/"]+/g," ").replace(/(\d) (MM|CM|M|M2|M3|KG|L|A|V|W)\b/g,"$1$2").replace(/\s+/g," ").trim()+" ";
+// item próprio (fora da SINAPI) guarda descrição, unidade e preço digitados
+const pu=i=>i.proprio?(+i.proprio.preco||0):preco(MAPA[i.cod]);
+const descItem=i=>i.proprio?i.proprio.desc:(MAPA[i.cod]||[])[1]||"";
 
 /* ---------- regras de sugestão ---------- */
 const DIAM={"5":"5(,0)?","6.3":"6,3","8":"8(,0)?","10":"10(,0)?","12.5":"12,5","16":"16(,0)?","20":"20(,0)?","25":"25(,0)?"};
@@ -368,7 +374,10 @@ function gerarItens(qtd,det){
   return novos;
 }
 
-async function importar(files){
+async function importar(todos){
+  const planilhas=todos.filter(f=>/\.(xlsx|xls|csv)$/i.test(f.name)),files=todos.filter(f=>/\.pdf$/i.test(f.name));
+  for(const f of planilhas)await importarPlanilha(f);
+  if(!files.length){salvar();render();return}
   if(!window.pdfjsLib){toast("Não consegui carregar o leitor de PDF. Verifique a internet e recarregue a página.");return}
   pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   let qtd=null,det=null;const nomes=[];
@@ -394,31 +403,114 @@ async function importar(files){
   salvar();render();
 }
 
+/* ---------- planilhas genéricas (Excel / CSV) ---------- */
+const ETAPA_POR_PALAVRA=[
+  ["01",/PLACA DE OBRA|LOCACAO|TAPUME|BARRACAO|CANTEIRO|LIGACAO PROVISORIA|LIMPEZA DO TERRENO|CAPINA/],
+  ["07",/IMPERMEAB/],
+  ["13",/PINTURA|TINTA|SELADOR|MASSA CORRIDA|MASSA ACRILICA|TEXTURA|VERNIZ|ESMALTE/],
+  ["09",/ELETR|TOMADA|INTERRUPTOR|CABO|FIO |QUADRO DE|DISJUNTOR|LUMINARIA|ILUMINA|ATERRAMENTO/],
+  ["08",/TUBO|TUBULA|REGISTRO|ESGOTO|AGUA FRIA|AGUA QUENTE|PLUVIAL|VASO|LAVATORIO|PIA|TANQUE|CHUVEIRO|TORNEIRA|CAIXA D|RALO|SIFAO|HIDRAUL|JOELHO|LUVA|TE |CURVA|ADAPTADOR/],
+  ["12",/PORTA|JANELA|ESQUADRIA|VIDRO|BASCULANTE|PORTAO|GRADE/],
+  ["11",/PISO|CONTRAPISO|RODAPE|PORCELANATO|SOLEIRA|PEITORIL/],
+  ["10",/CHAPISCO|REBOCO|EMBOCO|MASSA UNICA|REVESTIMENTO|AZULEJO/],
+  ["06",/TELHA|TELHADO|COBERTURA|CUMEEIRA|RUFO|CALHA|MADEIRAMENTO|TESOURA|FORRO/],
+  ["02",/ESCAVA|ATERRO|REATERRO|TERRAPLEN|CORTE DE TERRA/],
+  ["03",/SAPATA|BALDRAME|ESTACA|FUNDAC|BLOCO DE COROAMENTO|RADIER|LASTRO/],
+  ["04",/PILAR|VIGA|LAJE|CONCRETO|FORMA|ARMACAO|ACO CA/],
+  ["05",/ALVENARIA|BLOCO CERAMICO|BLOCO DE CONCRETO|TIJOLO|VERGA|DRYWALL/]
+];
+const etapaDe=(t,alt)=>{for(const x of [t,alt]){const n=norm(x||"");for(const[c,r]of ETAPA_POR_PALAVRA)if(r.test(n))return c}return"14"};
+const unidade=u=>{const n=norm(u).replace(/[^A-Z0-9²³]/g,"").replace("²","2").replace("³","3");
+  return({M2:"M2",M3:"M3",KG:"KG",M:"M",ML:"M",UN:"UN",UND:"UN",UNID:"UN",PC:"UN",PECA:"UN",CJ:"CJ",H:"H"})[n]||n};
+const PARADAS=new Set("DE DA DO DAS DOS EM COM PARA E A O AS OS NA NO UM UMA POR TIPO".split(" "));
+function sugerirPorTexto(desc,un){
+  if(!BASE)return{cod:null,alts:[]};
+  const nd=norm(desc),kd=chave(desc);
+  const tk=[...new Set(kd.trim().split(" ").filter(w=>w.length>=2&&!PARADAS.has(w)))];
+  if(!tk.length)return{cod:null,alts:[]};
+  const pl=kd.trim().split(" ");
+  const pares=pl.slice(1).map((w,i)=>pl[i]+" "+w).filter(x=>x.length>=5);
+  const U=unidade(un);
+  const sc=[];
+  for(const c of BASE.composicoes){
+    let s=0;for(const w of tk)if(c.k.includes(" "+w+" ")||(w.length>=4&&c.k.includes(w)))s+=w.length>=4?2:1;
+    for(const par of pares)if(c.k.includes(" "+par+" "))s+=2; // "14 CM", "25 MM", "GAVETA BRUTO"...
+    if(!s)continue;
+    if(U&&unidade(c[2])===U)s+=3;
+    if(preco(c)>0)s+=1;
+    if(/ESTRUTURAL/.test(c.n)&&!/ESTRUTURAL/.test(nd))s-=3; // alvenaria comum é de vedação
+    if(norm(c[1].split(" ")[0])===tk[0])s+=2; // mesma primeira palavra (ALVENARIA, PINTURA...)
+    sc.push([s,c]);
+  }
+  sc.sort((a,b)=>b[0]-a[0]||a[1][1].length-b[1][1].length);
+  return{cod:sc[0]?sc[0][1][0]:null,alts:sc.slice(0,25).map(x=>x[1][0])};
+}
+async function importarPlanilha(f){
+  if(!window.XLSX){toast("Não consegui carregar o leitor de planilhas. Verifique a internet e recarregue a página.");return}
+  let linhas;
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+    linhas=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""});
+  }catch(e){ARQS.push({n:f.name,t:"erro"});toast("Não consegui abrir "+f.name);return}
+  // acha a linha de cabeçalho: precisa de descrição e quantidade
+  let h=-1,cD=-1,cU=-1,cQ=-1,cC=-1;
+  for(let i=0;i<Math.min(linhas.length,30)&&h<0;i++){
+    const r=linhas[i].map(norm);
+    const d=r.findIndex(x=>/^(DESCRI|SERVICO|ITEM$|NOME|ELEMENTO|MATERIAL|FAMILIA|TIPO)/.test(x));
+    const q=r.findIndex(x=>/^(QUANT|QTD|QTDE|AREA|VOLUME|COMPRIMENTO|CONTAGEM|COUNT)/.test(x));
+    if(d>=0&&q>=0){h=i;cD=d;cQ=q;cU=r.findIndex(x=>/^(UN|UNID|UND)/.test(x));cC=r.findIndex(x=>/^(COD|CODIGO|SINAPI)/.test(x))}
+  }
+  if(h<0){ARQS.push({n:f.name,t:"sem colunas"});toast(`Em ${f.name} não achei as colunas de descrição e quantidade.`);return}
+  const cabQ=norm(linhas[h][cQ]);
+  const unPadrao=/AREA/.test(cabQ)?"M2":/VOLUME/.test(cabQ)?"M3":/COMPRIMENTO/.test(cabQ)?"M":/CONTAGEM|COUNT/.test(cabQ)?"UN":"";
+  const novos=[];
+  for(const r of linhas.slice(h+1)){
+    const desc=String(r[cD]??"").trim();
+    let q=r[cQ];q=typeof q==="number"?q:parseFloat(String(q).replace(/[^\d,.-]/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",","."));
+    if(!desc||!(q>0))continue;
+    const un=cU>=0&&r[cU]?String(r[cU]):unPadrao;
+    const codInf=cC>=0?String(r[cC]).trim():"";
+    const s=codInf&&MAPA[codInf]?{cod:codInf,alts:[]}:sugerirPorTexto(desc,un);
+    novos.push({id:uid(),etapa:etapaDe(desc,s.cod?MAPA[s.cod][1]:""),origem:`${f.name.replace(/\.[^.]+$/,"")} · ${desc}`,qtd:Math.round(q*100)/100,un:unidade(un)||(s.cod?MAPA[s.cod][2]:""),
+      cod:s.cod,alts:s.alts,ok:true,fonte:"planilha:"+f.name,auto:!codInf,
+      why:codInf&&MAPA[codInf]?`A planilha já trazia o código SINAPI ${codInf}.`:`Sugestão automática pelas palavras da sua descrição ("${desc}")${un?` e pela unidade (${un})`:""}. Confira: se não for o serviço certo, use "trocar" para escolher outro.`});
+  }
+  ITENS=ITENS.filter(i=>i.fonte!=="planilha:"+f.name).concat(novos);
+  ARQS.push({n:f.name,t:`planilha · ${novos.length} itens`});
+  novos.forEach(i=>abertas.add(i.etapa));
+  toast(`${novos.length} serviços criados a partir de ${f.name}. Confira as sugestões marcadas.`);
+}
+
 /* ---------- checklist do que costuma faltar ---------- */
 const CHECK={
-  "01":[["Placa de obra","PLACA DE OBRA"],["Locação da obra","LOCACAO"],["Instalações provisórias","LIGACAO PROVISORIA|ENTRADA PROVISORIA|ABRIGO PARA"],["Barracão / depósito","BARRACAO|CONTAINER|DEPOSITO"],["Limpeza do terreno","LIMPEZA (MECANIZADA )?DE (CAMADA|TERRENO)|ROCADO|CAPINA"]],
+  "01":[["Placa de obra","PLACA DE OBRA"],["Locação da obra","^LOCACAO"],["Instalações provisórias","LIGACAO PROVISORIA|ENTRADA PROVISORIA|ABRIGO PARA"],["Barracão / depósito","BARRACAO|CONTAINER|DEPOSITO"],["Limpeza do terreno","LIMPEZA (MECANIZADA )?DE (CAMADA|TERRENO)|ROCADO|CAPINA"]],
   "02":[["Escavação","ESCAVACAO"],["Reaterro / aterro","REATERRO|ATERRO"]],
   "03":[["Escavação de cavas e valas","ESCAVACAO"],["Lastro de concreto magro","LASTRO"],["Fôrma","FORMA"],["Armação","ARMACAO"],["Concreto","CONCRETAGEM"]],
   "04":[["Fôrma de pilares","FORMA DE PILARES"],["Fôrma de vigas","FORMA DE VIGA"],["Armação","ARMACAO"],["Concreto","CONCRETAGEM"],["Laje","^LAJE"]],
   "05":[["Alvenaria","ALVENARIA DE VEDACAO"],["Vergas e contravergas","VERGA"],["Encunhamento","ENCUNHAMENTO|FIXACAO \\(ENCUNHAMENTO\\)"]],
   "06":[["Estrutura do telhado","TRAMA|ESTRUTURA DE MADEIRA|ESTRUTURA METALICA|TESOURA"],["Telhas","TELHAMENTO"],["Cumeeira","CUMEEIRA"],["Rufos e calhas","RUFO|CALHA"]],
   "07":[["Impermeabilização","IMPERMEABILIZACAO"]],
-  "08":[["Tubulação de água","TUBO, PVC, SOLDAVEL"],["Tubulação de esgoto","TUBO PVC, SERIE NORMAL, ESGOTO"],["Registros","REGISTRO"],["Louças","VASO SANITARIO|LAVATORIO"],["Caixa d'água","CAIXA D.AGUA|RESERVATORIO"]],
+  "08":[["Tubulação de água","TUBO, PVC, SOLDAVEL"],["Tubulação de esgoto","TUBO PVC, SERIE NORMAL, ESGOTO"],["Registros","REGISTRO"],["Louças","BACIA SANITARIA|VASO SANITARIO|LAVATORIO"],["Caixa d'água","CAIXA D.AGUA|RESERVATORIO"]],
   "09":[["Eletrodutos","ELETRODUTO"],["Cabos","CABO DE COBRE"],["Tomadas e interruptores","TOMADA|INTERRUPTOR"],["Quadro de distribuição","QUADRO DE DISTRIBUICAO"]],
   "10":[["Chapisco","CHAPISCO"],["Emboço / massa única","EMBOCO|MASSA UNICA"],["Revestimento cerâmico","REVESTIMENTO CERAMICO"]],
   "11":[["Contrapiso","CONTRAPISO"],["Piso cerâmico / porcelanato","PISO|PORCELANATO"],["Rodapé","RODAPE"]],
   "12":[["Portas","PORTA"],["Janelas","JANELA"]],
   "13":[["Massa e selador","MASSA|SELADOR|FUNDO"],["Pintura","PINTURA"]],
-  "14":[["Limpeza final","LIMPEZA FINAL"],["Calçada","CALCADA|PASSEIO"]]
+  "14":[["Limpeza final","^LIMPEZA"],["Calçada","CALCADA|PASSEIO"]]
 };
-const BUSCA_TERMO={"Placa de obra":"placa de obra","Locação da obra":"locação convencional de obra","Instalações provisórias":"ligação provisória","Barracão / depósito":"barracão","Limpeza do terreno":"limpeza de camada vegetal","Escavação":"escavação","Reaterro / aterro":"reaterro","Escavação de cavas e valas":"escavação manual","Lastro de concreto magro":"lastro de concreto magro","Alvenaria":"alvenaria de vedação blocos cerâmicos","Vergas e contravergas":"verga","Encunhamento":"encunhamento","Estrutura do telhado":"trama de madeira","Telhas":"telhamento","Cumeeira":"cumeeira","Rufos e calhas":"rufo","Impermeabilização":"impermeabilização","Tubulação de água":"tubo pvc soldável","Tubulação de esgoto":"tubo pvc esgoto","Registros":"registro de gaveta","Louças":"vaso sanitário","Caixa d'água":"caixa d'água","Eletrodutos":"eletroduto","Cabos":"cabo de cobre","Tomadas e interruptores":"tomada","Quadro de distribuição":"quadro de distribuição","Chapisco":"chapisco","Emboço / massa única":"massa única","Revestimento cerâmico":"revestimento cerâmico","Contrapiso":"contrapiso","Piso cerâmico / porcelanato":"piso porcelanato","Rodapé":"rodapé","Portas":"porta de madeira","Janelas":"janela de alumínio","Massa e selador":"selador","Pintura":"pintura látex","Limpeza final":"limpeza final","Calçada":"calçada"};
+const BUSCA_TERMO={"Placa de obra":"placa de obra","Locação da obra":"locação convencional de obra","Instalações provisórias":"entrada de energia","Barracão / depósito":"barracão","Limpeza do terreno":"limpeza de camada vegetal","Escavação":"escavação","Reaterro / aterro":"reaterro","Escavação de cavas e valas":"escavação manual","Lastro de concreto magro":"lastro de concreto magro","Alvenaria":"alvenaria de vedação blocos cerâmicos","Vergas e contravergas":"verga","Encunhamento":"encunhamento","Estrutura do telhado":"trama de madeira","Telhas":"telhamento","Cumeeira":"cumeeira","Rufos e calhas":"rufo","Impermeabilização":"impermeabilização","Tubulação de água":"tubo pvc soldável","Tubulação de esgoto":"tubo pvc esgoto","Registros":"registro de gaveta","Louças":"bacia sanitária","Caixa d'água":"caixa d'água","Eletrodutos":"eletroduto","Cabos":"cabo de cobre","Tomadas e interruptores":"tomada","Quadro de distribuição":"quadro de distribuição","Chapisco":"chapisco","Emboço / massa única":"massa única","Revestimento cerâmico":"revestimento cerâmico","Contrapiso":"contrapiso","Piso cerâmico / porcelanato":"piso porcelanato","Rodapé":"rodapé","Portas":"porta de madeira","Janelas":"janela de alumínio","Massa e selador":"selador","Pintura":"pintura látex","Limpeza final":"limpeza de piso","Calçada":"calçada"};
 
 /* ---------- busca ---------- */
 function buscar(q,lim=40){
   if(!BASE)return[];
   const t=norm(q).split(/\s+/).filter(Boolean);
   if(!t.length)return[];
-  return BASE.composicoes.filter(c=>t.every(w=>c.n.includes(w)||c[0]===w)).sort((a,b)=>(preco(b)>0)-(preco(a)>0)).slice(0,lim);
+  const exatos=BASE.composicoes.filter(c=>t.every(w=>c.n.includes(w)||c[0]===w)).sort((a,b)=>(preco(b)>0)-(preco(a)>0));
+  if(exatos.length>=5)return exatos.slice(0,lim);
+  // poucas respostas: completa com os itens que têm mais palavras em comum
+  const s=sugerirPorTexto(q,"");
+  const extra=s.alts.map(k=>MAPA[k]).filter(c=>c&&!exatos.includes(c));
+  return exatos.concat(extra).slice(0,lim);
 }
 
 /* ---------- desenho ---------- */
@@ -428,7 +520,7 @@ const CORES=["var(--steel)","var(--accent)","#7c9a94","#c9a26b","#6b8fb3","#a378
 
 function totais(){
   const porEt={};let cd=0;
-  for(const i of ITENS){if(!i.ok)continue;const v=i.qtd*preco(MAPA[i.cod]);cd+=v;porEt[i.etapa]=(porEt[i.etapa]||0)+v}
+  for(const i of ITENS){if(!i.ok)continue;const v=i.qtd*pu(i);cd+=v;porEt[i.etapa]=(porEt[i.etapa]||0)+v}
   return{cd,porEt};
 }
 function render(){
@@ -451,10 +543,10 @@ function render(){
     <p><b>Nenhum serviço ainda.</b> Importe os PDFs do CYPECAD ao lado para lançar fundações e estrutura, ou adicione serviços em qualquer etapa abaixo.</p></div>`;
   for(const [c,nome] of ets){
     const its=ITENS.filter(i=>i.etapa===c);
-    const txt=its.filter(i=>i.ok&&MAPA[i.cod]).map(i=>MAPA[i.cod].n);
+    const txt=its.filter(i=>i.ok).map(i=>norm(descItem(i)));
     const chk=(CHECK[c]||[]).map(([n,re])=>{const r=new RegExp(re);return[n,txt.some(t=>r.test(t))]});
     const falta=chk.filter(x=>!x[1]).length;
-    const sub=its.filter(i=>i.ok).reduce((s,i)=>s+i.qtd*preco(MAPA[i.cod]),0);
+    const sub=its.filter(i=>i.ok).reduce((s,i)=>s+i.qtd*pu(i),0);
     const open=abertas.has(c);
     h+=`<section class="etapa ${open?"open":""}" data-et="${c}">
       <header data-tog="${c}" role="button" tabindex="0" aria-expanded="${open}"><h3><span class="code">${c}</span>${esc(nome)}</h3>
@@ -471,11 +563,11 @@ function render(){
   if(addEtapa){const a=$("addQ");if(a){a.focus();a.setSelectionRange(a.value.length,a.value.length)}}
 }
 function linha(i){
-  const c=MAPA[i.cod],pu=preco(c),tot=i.qtd*pu;
+  const c=i.proprio?["próprio",i.proprio.desc,i.proprio.un]:MAPA[i.cod],pr=pu(i),tot=i.qtd*pr;
   const alts=altAberto===i.id;
   return `<tr class="${i.ok?"":"off"}" data-id="${i.id}">
    <td><input type="checkbox" aria-label="Incluir" data-ok="${i.id}" ${i.ok?"checked":""}></td>
-   <td><span class="orig">${esc(i.origem)}${i.estimado?' · <span class="pill warn">estimado</span>':""}</span>
+   <td><span class="orig">${esc(i.origem)}${i.estimado?' · <span class="pill warn">estimado</span>':""}${i.auto?' · <span class="pill warn">sugestão: confira</span>':""}</span>
      ${c?`<span class="desc"><span class="cod">${c[0]}</span>${esc(c[1])}</span>`:`<span class="desc pill warn">nenhuma composição encontrada, escolha uma</span>`}
      <div class="row" style="margin-top:4px"><button class="why" type="button" data-why="${i.id}">${whyAberto.has(i.id)?"ocultar explicação":"por que esta?"}</button><button class="why" type="button" data-alt="${i.id}">trocar</button><button class="why" type="button" data-del="${i.id}">remover</button></div>
      ${whyAberto.has(i.id)?`<div class="whytxt">${esc(i.why||"Serviço adicionado por você.")}</div>`:""}
@@ -483,7 +575,7 @@ function linha(i){
    </td>
    <td class="n"><input type="number" step="0.01" min="0" value="${i.qtd}" data-q="${i.id}" aria-label="Quantidade"></td>
    <td>${esc(i.un||(c&&c[2])||"")}</td>
-   <td class="n">${pu?fmt(pu):'<span class="pill warn">sem preço</span>'}</td>
+   <td class="n">${i.proprio?`<input type="number" step="0.01" min="0" value="${pr}" data-pu="${i.id}" aria-label="Preço unitário">`:pr?fmt(pr):'<span class="pill warn">sem preço</span>'}</td>
    <td class="n">${fmt(tot)}</td></tr>`;
 }
 function altBox(i){
@@ -491,12 +583,14 @@ function altBox(i){
   return `<div class="alts"><input type="text" id="altQ" data-altq="${i.id}" value="${esc(i.q||"")}" placeholder="Buscar outra composição (ex.: fôrma pilar 4 utilizações)">
     <ul>${lista.map(c=>`<li><button type="button" data-pick="${i.id}|${c[0]}"><span class="cod">${c[0]}</span><span>${esc(c[1])}</span><span class="pr">${preco(c)?fmt(preco(c)):"—"} /${esc(c[2])}</span></button></li>`).join("")||'<li class="hint">Nada encontrado.</li>'}</ul></div>`;
 }
-let addQ="",addSel=null;
+let addQ="",addSel=null,propAberto=false;
 function addForm(c){
   const r=buscar(addQ,25);
   return `<div class="alts"><b>Adicionar serviço em ${esc((ETAPAS.find(e=>e[0]===c)||[])[1])}</b>
    <input type="text" id="addQ" value="${esc(addQ)}" placeholder="Digite o serviço (ex.: alvenaria bloco cerâmico 14)">
    <ul>${r.map(x=>`<li><button type="button" data-addpick="${x[0]}" ${addSel===x[0]?'style="background:var(--accent-soft)"':""}><span class="cod">${x[0]}</span><span>${esc(x[1])}</span><span class="pr">${preco(x)?fmt(preco(x)):"—"} /${esc(x[2])}</span></button></li>`).join("")||(addQ?'<li class="hint">Nada encontrado. Tente outras palavras.</li>':'<li class="hint">Digite para buscar na SINAPI.</li>')}</ul>
+   ${addQ?`<div class="hint">Não achou? Alguns serviços não existem na SINAPI (barracão, ligações de água e luz, limpeza final, itens sob medida). <button class="why" type="button" id="propOpen">Criar item próprio com seu preço</button></div>`:""}
+   ${propAberto?`<div class="add" style="grid-template-columns:minmax(0,1fr) 80px 110px 100px auto"><input id="propD" placeholder="Descrição" value="${esc(addQ)}"><input id="propU" placeholder="Un." value="un"><input id="propP" type="number" step="0.01" min="0" placeholder="Preço unit."><input id="propN" type="number" step="0.01" min="0" placeholder="Qtd."><button class="btn small" type="button" id="propOk">Criar</button></div>`:""}
    <div class="add"><span class="hint">${addSel?`Selecionado: <b>${addSel}</b>. Informe a quantidade em ${esc(MAPA[addSel][2])}:`:"Escolha um item da lista."}</span>
    <input type="number" id="addN" step="0.01" min="0" placeholder="Qtd." ${addSel?"":"disabled"}>
    <span class="row"><button class="btn small" type="button" id="addOk" ${addSel?"":"disabled"}>Adicionar</button><button class="btn small ghost" type="button" id="addX">Fechar</button></span></div></div>`;
@@ -504,18 +598,24 @@ function addForm(c){
 
 /* ---------- eventos ---------- */
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-tog],[data-why],[data-alt],[data-del],[data-pick],[data-add],[data-busca],[data-addpick],#addOk,#addX");
+  const t=e.target.closest("[data-tog],[data-why],[data-alt],[data-del],[data-pick],[data-add],[data-busca],[data-addpick],#addOk,#addX,#propOpen,#propOk");
   if(!t)return;
   const d=t.dataset;
   if(d.tog){abertas.has(d.tog)?abertas.delete(d.tog):abertas.add(d.tog);sv("obimorca.abertas",[...abertas]);render();return}
   if(d.why){whyAberto.has(d.why)?whyAberto.delete(d.why):whyAberto.add(d.why);render();return}
   if(d.alt){altAberto=altAberto===d.alt?null:d.alt;render();return}
   if(d.del){ITENS=ITENS.filter(i=>i.id!==d.del);salvar();render();return}
-  if(d.pick){const[id,cod]=d.pick.split("|");const i=ITENS.find(x=>x.id===id);i.cod=cod;i.un=MAPA[cod][2];i.why=(i.why||"")+` Você trocou a composição para ${cod}.`;altAberto=null;salvar();render();return}
+  if(d.pick){const[id,cod]=d.pick.split("|");const i=ITENS.find(x=>x.id===id);i.cod=cod;i.auto=false;i.un=MAPA[cod][2];i.why=(i.why||"")+` Você trocou a composição para ${cod}.`;altAberto=null;salvar();render();return}
   if(d.add){addEtapa=d.add;addQ="";addSel=null;render();return}
   if(d.busca){const[c,q]=d.busca.split("|");abertas.add(c);addEtapa=c;addQ=q;addSel=null;render();return}
   if(d.addpick){addSel=d.addpick;render();setTimeout(()=>$("addN")&&$("addN").focus());return}
-  if(t.id==="addX"){addEtapa=null;render();return}
+  if(t.id==="addX"){addEtapa=null;propAberto=false;render();return}
+  if(t.id==="propOpen"){propAberto=true;render();setTimeout(()=>$("propP")&&$("propP").focus());return}
+  if(t.id==="propOk"){const d=$("propD").value.trim(),u=$("propU").value.trim()||"un",p=parseFloat(($("propP").value||"").replace(",",".")),q=parseFloat(($("propN").value||"").replace(",","."));
+    if(!d||!(p>=0)||!(q>0)){toast("Preencha descrição, preço e quantidade.");return}
+    ITENS.push({id:uid(),etapa:addEtapa,origem:"item próprio (fora da SINAPI)",qtd:q,un:u,cod:null,proprio:{desc:d,un:u,preco:p},ok:true,fonte:"manual",
+      why:"Item criado por você com preço próprio, porque não existe composição equivalente na SINAPI. Guarde o orçamento ou a cotação que justifica esse valor."});
+    propAberto=false;addQ="";salvar();render();toast("Item próprio criado.");return}
   if(t.id==="addOk"){const q=parseFloat(($("addN").value||"").replace(",","."));if(!(q>0)){toast("Informe uma quantidade maior que zero.");return}
     const c=MAPA[addSel];ITENS.push({id:uid(),etapa:addEtapa,origem:"lançado por você",qtd:q,un:c[2],cod:c[0],alts:[],ok:true,fonte:"manual"});
     addSel=null;addQ="";salvar();render();toast("Serviço adicionado.");return}
@@ -525,17 +625,18 @@ document.addEventListener("change",e=>{
   const t=e.target;
   if(t.dataset.ok){const i=ITENS.find(x=>x.id===t.dataset.ok);i.ok=t.checked;salvar();render()}
   if(t.dataset.q){const i=ITENS.find(x=>x.id===t.dataset.q);i.qtd=parseFloat(t.value)||0;salvar();render()}
+  if(t.dataset.pu){const i=ITENS.find(x=>x.id===t.dataset.pu);i.proprio.preco=parseFloat(t.value)||0;salvar();render()}
 });
 let tq;
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.dataset.altq){const i=ITENS.find(x=>x.id===t.dataset.altq);i.q=t.value;clearTimeout(tq);tq=setTimeout(()=>{render();const a=$("altQ");if(a){a.focus();a.setSelectionRange(a.value.length,a.value.length)}},250)}
-  if(t.id==="addQ"){addQ=t.value;addSel=null;clearTimeout(tq);tq=setTimeout(render,250)}
+  if(t.id==="addQ"){addQ=t.value;addSel=null;propAberto=false;clearTimeout(tq);tq=setTimeout(render,250)}
 });
 const drop=$("drop");
 ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
-drop.addEventListener("drop",e=>importar([...e.dataTransfer.files].filter(f=>/pdf$/i.test(f.name))));
+drop.addEventListener("drop",e=>importar([...e.dataTransfer.files].filter(f=>/\.(pdf|xlsx|xls|csv)$/i.test(f.name))));
 $("fileIn").addEventListener("change",e=>{importar([...e.target.files]);e.target.value=""});
 $("limpar").onclick=()=>$("limparOk").hidden=false;
 $("limparNao").onclick=()=>$("limparOk").hidden=true;
@@ -544,7 +645,7 @@ $("csv").onclick=()=>{
   const ets=Object.fromEntries(ETAPAS);
   const lin=[["Etapa","Código SINAPI","Descrição","Origem","Unidade","Quantidade","Custo unitário","Custo total","Preço unitário com BDI","Preço total com BDI"]];
   for(const [c] of etapasAtivas())for(const i of ITENS.filter(x=>x.ok&&x.etapa===c)){
-    const m=MAPA[i.cod]||["","",""],pu=preco(m);
+    const m=i.proprio?["próprio",i.proprio.desc,i.proprio.un]:MAPA[i.cod]||["","",""],pu=window.__pu(i);
     lin.push([`${c} ${ets[c]}`,m[0],m[1],i.origem,i.un||m[2],fmt(i.qtd),fmt(pu),fmt(pu*i.qtd),fmt(pu*(1+BDI/100)),fmt(pu*i.qtd*(1+BDI/100))]);
   }
   const{cd}=totais();lin.push([]);lin.push(["","","Custo direto","","","","",fmt(cd)]);lin.push(["","","BDI "+fmt(BDI)+"%","","","","",fmt(cd*BDI/100)]);lin.push(["","","Preço de venda","","","","",fmt(cd*(1+BDI/100))]);
@@ -553,6 +654,7 @@ $("csv").onclick=()=>{
   a.download=`orcamento-${(CFG.nome||"obra").replace(/[^\w-]+/g,"-").toLowerCase()}.csv`;document.body.appendChild(a);a.click();a.remove();
 };
 
+window.__pu=pu;
 carregarBase().then(()=>{
   // atualiza sugestões que ficaram sem composição numa base anterior
   ITENS.forEach(i=>{if(i.cod&&!MAPA[i.cod])i.cod=null});
