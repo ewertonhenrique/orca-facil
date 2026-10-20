@@ -7,6 +7,7 @@ Site para montar orçamentos de obras residenciais, passo a passo, com explicaç
 | Arquivo | Para que serve |
 | --- | --- |
 | `index.html` | Assistente guiado: obra, local e base, desoneração, encargos, BDI, etapas e resumo |
+| `orcamento.html` | Lançamento dos serviços: importa os PDFs do CYPECAD, sugere a composição SINAPI de cada item, avisa o que costuma faltar e exporta para Excel |
 | `busca.html` | Consulta às composições e insumos da SINAPI por estado |
 | `dados/sinapi/` | Base SINAPI convertida para o site (gerada pelo robô, não edite à mão) |
 | `scripts/atualizar_sinapi.py` | Robô que baixa a SINAPI da Caixa e converte |

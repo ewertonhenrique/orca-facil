@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Serviços · OBIM Orça</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 8 8 2l7 6v7H1z%22 fill=%22%23b8611d%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+/* Layout: faixa de resumo fixa no topo da coluna, importação à esquerda, etapas com itens à direita */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#1d2622; --muted:#5b6862; --line:#d9dedb;
+  --accent:#b8611d; --accent-soft:#f6e6d6; --steel:#2f5d62; --steel-soft:#dceae9;
+  --ok:#2e7d4f; --ok-soft:#dcefe3; --warn:#a36a00; --warn-soft:#fbefd2; --off:#9aa5a0;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1d2421; --ink:#e6ebe8; --muted:#9aa8a1; --line:#33403b;
+  --accent:#e08a44; --accent-soft:#3a2a1c; --steel:#7fb5ba; --steel-soft:#1f3436;
+  --ok:#6cc58f; --ok-soft:#1d3326; --warn:#e3b04d; --warn-soft:#3a3020; --off:#5f6b66; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1d2421; --ink:#e6ebe8; --muted:#9aa8a1; --line:#33403b;
+  --accent:#e08a44; --accent-soft:#3a2a1c; --steel:#7fb5ba; --steel-soft:#1f3436;
+  --ok:#6cc58f; --ok-soft:#1d3326; --warn:#e3b04d; --warn-soft:#3a3020; --off:#5f6b66; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+header.top h1{font-family:var(--f-display);font-weight:800;font-size:1.6rem;margin:0}
+header.top h1 span{color:var(--accent)}
+header.top nav{display:flex;gap:16px;flex-wrap:wrap}
+a{color:var(--steel);font-weight:700}
+.obra{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.92rem;color:var(--muted)}
+.obra b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
+.side{display:flex;flex-direction:column;gap:14px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:980px){.side{position:static}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+.card h2{font-family:var(--f-display);font-size:1.05rem;margin:0 0 8px}
+.hint{font-size:.88rem;color:var(--muted)}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:18px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop svg{width:42px;height:42px}
+.drop svg .p{fill:none;stroke:var(--steel);stroke-width:2;stroke-linejoin:round}
+.drop svg .a{fill:var(--accent)}
+.files{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:.88rem}
+.files div{display:flex;gap:8px;align-items:baseline}
+.pill{font-family:var(--f-mono);font-size:.7rem;padding:1px 7px;border-radius:99px;background:var(--steel-soft);color:var(--steel);font-weight:600;white-space:nowrap}
+.pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.ok{background:var(--ok-soft);color:var(--ok)}
+.totais dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;margin:0;font-variant-numeric:tabular-nums}
+.totais dt{color:var(--muted)} .totais dd{margin:0;text-align:right;font-family:var(--f-mono);font-weight:600}
+.totais .final dt,.totais .final dd{color:var(--ink);font-size:1.05rem;border-top:1px solid var(--line);padding-top:6px}
+.totais .big{font-family:var(--f-display);font-weight:800;font-size:1.7rem;color:var(--steel);margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.etbar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:10px 0 4px;background:var(--line)}
+.etbar span{display:block;height:100%}
+.btn{font:inherit;font-weight:700;padding:8px 14px;border-radius:6px;border:1.5px solid var(--ink);background:var(--ink);color:var(--surface);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.small{padding:4px 10px;font-size:.85rem;font-weight:600}
+.btn:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.etapa{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.etapa>header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:12px 16px;cursor:pointer;border-bottom:1px solid transparent}
+.etapa.open>header{border-bottom-color:var(--line)}
+.etapa>header h3{margin:0;font-family:var(--f-display);font-size:1.02rem;flex:1 1 220px}
+.etapa>header h3 .code{font-family:var(--f-mono);color:var(--accent);margin-right:8px}
+.etapa>header .sum{font-family:var(--f-mono);font-weight:600;font-variant-numeric:tabular-nums}
+.etapa .body{display:none;padding:12px 16px 16px;flex-direction:column;gap:12px}
+.etapa.open .body{display:flex}
+.chk{display:flex;flex-wrap:wrap;gap:6px}
+.chk span{font-size:.82rem;padding:3px 9px;border-radius:99px;border:1px solid var(--line);display:inline-flex;gap:6px;align-items:center}
+.chk span.ok{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.chk span.falta{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.chk button{all:unset;cursor:pointer;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.off td{color:var(--off)} tr.off td .desc{text-decoration:line-through}
+td .orig{font-size:.8rem;color:var(--muted)}
+td .cod{font-family:var(--f-mono);color:var(--accent);font-size:.82rem;margin-right:6px}
+td .desc{display:block;max-width:60ch}
+td input[type=number]{width:96px;font:inherit;font-family:var(--f-mono);padding:4px 6px;border:1.5px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);text-align:right}
+td input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);margin-top:3px}
+.why{all:unset;cursor:pointer;font-size:.8rem;color:var(--steel);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.whytxt{font-size:.85rem;background:var(--steel-soft);border-radius:6px;padding:8px 10px;margin-top:6px;max-width:70ch}
+.alts{margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.alts input[type=text]{font:inherit;padding:6px 9px;border:1.5px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);width:100%}
+.alts ul{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;display:flex;flex-direction:column}
+.alts li button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;padding:6px 6px;border-radius:5px;width:100%;box-sizing:border-box;font-size:.85rem}
+.alts li button:hover,.alts li button:focus-visible{background:var(--accent-soft)}
+.alts li .pr{font-family:var(--f-mono);white-space:nowrap}
+.empty{padding:28px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:8px;background:var(--surface)}
+.empty svg{width:120px;height:auto;margin-bottom:8px}
+.empty svg .l{fill:none;stroke:var(--muted);stroke-width:2}
+.empty svg .c{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.9rem}
+.add{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:center}
+.add input{font:inherit;padding:6px 9px;border:1.5px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);width:100%}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-weight:600;max-width:90vw}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>OBIM <span>Orça</span> · Serviços</h1>
+    <nav><a href="index.html">1. Configuração</a><a href="orcamento.html" aria-current="page">2. Serviços</a><a href="busca.html">Consultar SINAPI</a></nav>
+  </header>
+  <div class="obra" id="obra"></div>
+  <div class="grid">
+    <aside class="side">
+      <section class="card">
+        <h2>Importar quantitativos</h2>
+        <label class="drop" id="drop" for="fileIn">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path class="p" d="M12 4h17l9 9v31H12z"/><path class="p" d="M29 4v9h9"/><rect class="a" x="17" y="24" width="16" height="3" rx="1"/><rect class="a" x="17" y="31" width="12" height="3" rx="1"/></svg>
+          <b>Arraste os PDFs do CYPECAD aqui</b>
+          <span class="hint">ou clique para escolher. Use "Quantidades da obra" e "Quantidades de armadura por diâmetro".</span>
+        </label>
+        <input type="file" id="fileIn" accept=".pdf,application/pdf" multiple hidden>
+        <div class="files" id="files"></div>
+      </section>
+      <section class="card totais" id="totais"></section>
+      <section class="card">
+        <h2>Planilha</h2>
+        <div class="row">
+          <button class="btn small" id="csv" type="button">Baixar para Excel</button>
+          <button class="btn small ghost" id="limpar" type="button">Limpar serviços</button>
+        </div>
+        <div class="note" id="limparOk" hidden>Apagar todos os serviços lançados? <button class="btn small" id="limparSim" type="button">Apagar</button> <button class="btn small ghost" id="limparNao" type="button">Cancelar</button></div>
+      </section>
+    </aside>
+    <main id="main"></main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase();
+const fmt=(n,d=2)=>Number(n||0).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const R$=n=>"R$ "+fmt(n);
+const ld=(k,def)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3200)}
+
+/* ---------- configuração vinda do assistente ---------- */
+const CFG=ld("obimorca.rascunho",{});
+const UF=CFG.uf||"GO", REG=CFG.desonerado==="sim"?4:3;
+const ETAPAS=[["01","Serviços preliminares"],["02","Movimento de terra"],["03","Fundações"],["04","Estrutura"],["05","Alvenaria e vedações"],["06","Cobertura"],["07","Impermeabilização"],["08","Instalações hidrossanitárias"],["09","Instalações elétricas"],["10","Revestimentos"],["11","Pisos"],["12","Esquadrias"],["13","Pintura"],["14","Serviços complementares"]];
+const etapasAtivas=()=>CFG.etapas?ETAPAS.filter(e=>CFG.etapas.includes(e[1])):ETAPAS;
+function calcBDI(){
+  const b=CFG.bdi||{ac:4,sg:.8,r:1.27,df:1.23,l:7.4};
+  const iss=(CFG.issAliq??3)*(CFG.issBase??50)/100;
+  const I=((CFG.pis??.65)+(CFG.cofins??3)+iss+(CFG.desonerado==="sim"?(CFG.cprb??2.7):0))/100;
+  return (((1+(b.ac+b.sg+b.r)/100)*(1+b.df/100)*(1+b.l/100))/(1-I)-1)*100;
+}
+const BDI=calcBDI();
+
+/* ---------- base SINAPI ---------- */
+let BASE=null, MAPA={}, META=null;
+async function carregarBase(){
+  try{META=await (await fetch("dados/sinapi/meta.json",{cache:"no-store"})).json()}catch(e){}
+  try{
+    BASE=await (await fetch(`dados/sinapi/${UF}.json`)).json();
+    BASE.composicoes.forEach(c=>{c.n=norm(c[1]);MAPA[c[0]]=c});
+  }catch(e){BASE=null}
+}
+const preco=c=>c?(c[REG]??0):0;
+
+/* ---------- regras de sugestão ---------- */
+const DIAM={"5":"5(,0)?","6.3":"6,3","8":"8(,0)?","10":"10(,0)?","12.5":"12,5","16":"16(,0)?","20":"20(,0)?","25":"25(,0)?"};
+const terrea=CFG.tipo!=="sobrado"&&CFG.tipo!=="predio";
+function regrasAco(el,aco,d){
+  const dr=`DE ${DIAM[d]||String(d).replace(".",",")} MM`;
+  const A=aco.replace("-","-?");
+  if(el==="sapata"||el==="baldrame")return[
+    {must:["^ARMACAO DE SAPATA ISOLADA, VIGA BALDRAME",A,dr]},
+    {must:["^ARMACAO DE (BLOCO|BLOCO E SAPATA|BLOCO, SAPATA)",A,dr]}];
+  if(el==="laje")return[{must:["^ARMACAO DE LAJE DE ESTRUTURA CONVENCIONAL",A,dr]}];
+  return[{must:["^ARMACAO DE PILAR OU VIGA DE ESTRUTURA CONVENCIONAL",A,dr]}];
+}
+const R={
+  forma:{
+    sapata:[{must:["FORMA PARA SAPATA,","MADEIRA SERRADA"],prefer:["2 UTILIZACOES"]}],
+    baldrame:[{must:["FORMA PARA VIGA BALDRAME","MADEIRA SERRADA"],prefer:["2 UTILIZACOES"]}],
+    pilar:[{must:["^MONTAGEM E DESMONTAGEM DE FORMA DE PILARES RETANGULARES","PE-DIREITO SIMPLES"],prefer:["COMPENSADA RESINADA","2 UTILIZACOES"]}],
+    viga:[{must:["^MONTAGEM E DESMONTAGEM DE FORMA DE VIGA","PE-DIREITO SIMPLES"],prefer:["MADEIRA RESINADA","2 UTILIZACOES","GARFO DE MADEIRA"]}]
+  },
+  concreto:{
+    sapata:[{must:["^CONCRETAGEM DE SAPATA,"],prefer:["JERICA"]}],
+    baldrame:[{must:["^CONCRETAGEM DE BLOCO DE COROAMENTO OU VIGA BALDRAME"],prefer:["JERICA"]}],
+    pilar:[{must:["^CONCRETAGEM DE PILARES","25"],prefer:["BALDES"]}],
+    viga:[{must:["^CONCRETAGEM DE VIGAS E LAJES","25"],prefer:terrea?["EDIFICACAO TERREA","BALDES"]:["04 ANDARES","BALDES"]}]
+  },
+  laje:[{must:["^LAJE PRE-MOLDADA UNIDIRECIONAL","ENCHIMENTO EM CERAMICA","LT.{0,3}= 12"],prefer:["VAOS MAIORES QUE 3,0","PARA PISO"]}]
+};
+function escolher(regras){
+  if(!BASE)return{cod:null,alts:[]};
+  for(const r of regras){
+    const mres=r.must.map(p=>new RegExp(p));
+    let c=BASE.composicoes.filter(x=>mres.every(m=>m.test(x.n)));
+    if(!c.length)continue;
+    const pr=(r.prefer||[]).map(p=>new RegExp(p));
+    c=c.map(x=>({x,s:pr.filter(m=>m.test(x.n)).length+(preco(x)>0?10:0)}))
+       .sort((a,b)=>b.s-a.s||preco(a.x)-preco(b.x)).map(o=>o.x);
+    return{cod:c[0][0],alts:c.slice(0,12).map(x=>x[0])};
+  }
+  return{cod:null,alts:[]};
+}
+
+/* ---------- leitura dos PDFs do CYPECAD ---------- */
+async function linhasPDF(file){
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  const out=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const tc=await (await pdf.getPage(p)).getTextContent();
+    const its=tc.items.filter(i=>i.str.trim()).map(i=>({s:i.str.trim(),x:i.transform[4],y:i.transform[5]}));
+    its.sort((a,b)=>b.y-a.y||a.x-b.x);
+    let cur=null;
+    for(const it of its){
+      if(cur&&Math.abs(cur.y-it.y)<=2.5){cur.t.push(it)}else{cur={y:it.y,t:[it]};out.push(cur)}
+    }
+    out.forEach(l=>l.t.sort((a,b)=>a.x-b.x));
+  }
+  return out.map(l=>l.t.map(t=>t.s).join(" ").replace(/\s+/g," ").trim());
+}
+const PISO=/^(\d{1,2}\s*-\s*.+|TOTAL OBRA)$/i;
+const ELEM=[
+  [/^ZAPATAS? ISOLADAS?|^SAPATAS? ISOLADAS?/,"sapata","Sapatas isoladas","03"],
+  [/^VIGAS? DE EQUILIBRIO|^VIGAS? BALDRAME/,"baldrame","Vigas de equilíbrio (baldrame)","03"],
+  [/^LAJES? DE VIGOTAS?/,"laje","Lajes de vigotas","04"],
+  [/^VIGAS?( DE CONCRETO)?$|^VIGAS? DE CONCRETO/,"viga","Vigas","04"],
+  [/^PILARES?/,"pilar","Pilares","04"]
+];
+const qualElem=t=>{const n=norm(t).trim();for(const e of ELEM)if(e[0].test(n))return e;return null};
+// o CYPECAD usa ponto como separador decimal (4.811 m³ = quatro vírgula oito)
+const num=s=>{if(s==="-"||s==null)return null;s=String(s);return parseFloat(s.includes(",")?s.replace(/\./g,"").replace(",","."):s)};
+
+function lerQuantidades(L){
+  // devolve {elemento: {forma, superficie, volume, barras}} somando os pavimentos (ignora "Total obra")
+  const r={};let piso=null,cols=null;
+  for(const l of L){
+    const n=norm(l);
+    if(PISO.test(l)&&!/FORMAS|VOLUME/.test(n)){piso=n.startsWith("TOTAL OBRA")?null:l;continue}
+    if(/FORMAS/.test(n)&&/VOLUME/.test(n)){cols=n.match(/FORMAS|SUPERFICIE|VOLUME|BARRAS/g);continue}
+    if(!piso||!cols)continue;
+    const tk=l.split(" ");const vals=[];
+    while(tk.length&&/^(-|\d[\d.,]*)$/.test(tk[tk.length-1])&&vals.length<cols.length)vals.unshift(tk.pop());
+    if(vals.length!==cols.length)continue;
+    const e=qualElem(tk.join(" "));if(!e)continue;
+    const o=r[e[1]]||(r[e[1]]={forma:0,superficie:0,volume:0,barras:0,pisos:[]});
+    cols.forEach((c,i)=>{const v=num(vals[i]);if(v!=null)o[{FORMAS:"forma",SUPERFICIE:"superficie",VOLUME:"volume",BARRAS:"barras"}[c]]+=v});
+    o.pisos.push(piso);
+  }
+  return r;
+}
+function lerArmadura(L,qtd){
+  // blocos por pavimento: {aco, nome, linhas:[{d,kg}], total}
+  const pisos=[];let piso=null,bloco=null,pendNome=null;
+  const fecha=()=>{bloco=null};
+  for(const l of L){
+    const n=norm(l);
+    if(PISO.test(l)&&!/REFERENCIA|COMPRIMENTO/.test(n)){
+      piso=n.startsWith("TOTAL OBRA")?null:{nome:l,blocos:[]};if(piso)pisos.push(piso);bloco=null;pendNome=null;continue}
+    if(!piso)continue;
+    if(/TIPO DE ACO|REFERENCIA|COMPRIMENTO|PAGINA|QUANTIDADES DE ARMADURA|^NOTAS|^PESO:|DATA:/.test(n))continue;
+    const novo=()=>{bloco={aco:null,nome:pendNome,linhas:[],total:null};pendNome=null;piso.blocos.push(bloco)};
+    const mt=n.match(/TOTAL \+ ?10 ?%\s+([\d.,]+)/);
+    let resto=n;
+    const ma=resto.match(/CA-?(50|60)/);
+    const md=l.match(/[Øø∅]\s*([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)/);
+    if(md&&!bloco)novo();
+    if(ma){if(!bloco)novo();bloco.aco="CA-"+ma[1]}
+    const nomeTxt=l.replace(/[Øø∅]\s*[\d.,]+\s+[\d.,]+\s+[\d.,]+/,"").replace(/CA-?\s?(50|60)/i,"").replace(/Total \+ ?10 ?%\s+[\d.,]+/i,"").trim();
+    const e=nomeTxt&&qualElem(nomeTxt);
+    if(e){if(bloco)bloco.nome=e[1];else pendNome=e[1]}
+    if(md)bloco.linhas.push({d:String(num(md[1])),kg:num(md[3])});
+    if(mt&&bloco){bloco.total=num(mt[1]);fecha()}
+  }
+  // atribui blocos sem nome ao vizinho (anterior ou seguinte) com outro tipo de aço, conferindo com as barras do resumo
+  const det={};
+  for(const p of pisos){
+    const B=p.blocos;
+    B.forEach((b,i)=>{
+      if(b.nome)return;
+      const cand=[B[i-1],B[i+1]].filter(x=>x&&x.nome&&x.aco!==b.aco&&!B.some(y=>y!==b&&y.nome===x.nome&&y.aco===b.aco&&y.nome));
+      let alvo=null;
+      if(qtd){alvo=cand.find(x=>{const soma=B.filter(y=>y.nome===x.nome).reduce((s,y)=>s+(y.total||0),0)+(b.total||0);
+        const q=porPiso(qtd,p.nome,x.nome);return q!=null&&Math.abs(q-soma)<=2})}
+      if(!alvo)alvo=cand.find(x=>!(x.nome==="laje"&&b.aco==="CA-60"))||cand[0]||null;
+      if(alvo)b.nome=alvo.nome;
+    });
+    for(const b of B){
+      if(!b.nome)continue;
+      for(const r of b.linhas){
+        const k=`${b.nome}|${b.aco||"CA-50"}|${r.d}`;
+        det[k]=(det[k]||0)+r.kg; // o relatório já inclui as perdas
+      }
+    }
+  }
+  return det;
+}
+let PORPISO={};
+function porPiso(_q,piso,el){return PORPISO[piso+"|"+el]??null}
+function lerQuantidadesPorPiso(L){
+  const r={};let piso=null,cols=null;
+  for(const l of L){
+    const n=norm(l);
+    if(PISO.test(l)&&!/FORMAS|VOLUME/.test(n)){piso=n.startsWith("TOTAL OBRA")?null:l;continue}
+    if(/FORMAS/.test(n)&&/VOLUME/.test(n)){cols=n.match(/FORMAS|SUPERFICIE|VOLUME|BARRAS/g);continue}
+    if(!piso||!cols)continue;
+    const tk=l.split(" ");const vals=[];
+    while(tk.length&&/^(-|\d[\d.,]*)$/.test(tk[tk.length-1])&&vals.length<cols.length)vals.unshift(tk.pop());
+    if(vals.length!==cols.length)continue;
+    const e=qualElem(tk.join(" "));if(!e)continue;
+    const bi=cols.indexOf("BARRAS");if(bi>=0)r[piso+"|"+e[1]]=num(vals[bi]);
+  }
+  return r;
+}
+
+/* ---------- itens ---------- */
+let ITENS=ld("obimorca.itens",[]);
+let ARQS=ld("obimorca.arquivos",[]);
+const salvar=()=>{sv("obimorca.itens",ITENS);sv("obimorca.arquivos",ARQS)};
+const nomeEl=k=>(ELEM.find(e=>e[1]===k)||[])[2]||k;
+const etEl=k=>(ELEM.find(e=>e[1]===k)||[])[3]||"04";
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+function gerarItens(qtd,det){
+  const novos=[];
+  const add=(etapa,origem,qtdv,un,regras,why,extra={})=>{
+    if(!qtdv||qtdv<=0)return;
+    const s=escolher(regras);
+    novos.push({id:uid(),etapa,origem,qtd:Math.round(qtdv*100)/100,un,cod:s.cod,alts:s.alts,why,ok:true,fonte:"CYPECAD",...extra});
+  };
+  for(const [el,o] of Object.entries(qtd)){
+    const et=etEl(el),nm=nomeEl(el);
+    if(el!=="laje")add(et,`${nm} · fôrma`,o.forma,"m²",R.forma[el],
+      `O CYPECAD mediu ${fmt(o.forma)} m² de fôrma em ${nm.toLowerCase()}. A composição escolhida já inclui fabricação, montagem e desmontagem. Escolhemos 2 reaproveitamentos da madeira, comum em casas; se a fôrma for reaproveitada mais vezes, troque pela opção de 4 utilizações (fica mais barata).`);
+    if(el==="laje"){
+      add(et,`${nm} · laje pré-moldada`,o.superficie,"m²",R.laje,
+        `Laje de vigotas com ${fmt(o.superficie)} m². A composição de laje pré-moldada da SINAPI já inclui vigotas, lajotas cerâmicas, concreto da capa e escoramento. Sugerimos altura total de 12 cm (8+4); se o projeto estrutural indicar outra altura, troque aqui.`);
+      add(et,`${nm} · concreto da capa`,o.volume,"m³",R.concreto.viga,
+        `Volume de concreto da laje (${fmt(o.volume,3)} m³). Ele já está dentro da composição de laje pré-moldada, por isso este item vem desmarcado para não contar duas vezes.`,{ok:false});
+    }else{
+      add(et,`${nm} · concreto`,o.volume,"m³",R.concreto[el],
+        `Volume de concreto de ${nm.toLowerCase()}: ${fmt(o.volume,3)} m³. A composição inclui o lançamento, o adensamento e o acabamento do concreto. Para obra térrea ou pequena, sugerimos lançamento com baldes ou jerica; se for usar bomba, troque pela opção "com uso de bomba".`);
+    }
+    // armadura: detalhada por diâmetro se o PDF de armaduras foi enviado; senão estimativa com Ø10
+    const linhas=Object.entries(det||{}).filter(([k])=>k.startsWith(el+"|"));
+    if(linhas.length){
+      for(const [k,kg] of linhas){
+        const[,aco,d]=k.split("|");
+        add(et,`${nm} · aço ${aco} Ø${String(d).replace(".",",")}`,kg,"kg",regrasAco(el,aco,d),
+          `${fmt(kg,1)} kg de aço ${aco} Ø${d.replace(".",",")} mm em ${nm.toLowerCase()}, já com as perdas, como vem no relatório do CYPECAD. A composição de armação já inclui o corte, a dobra e a montagem do aço.`+(el==="laje"?" Confira se o fornecedor da laje já entrega a armadura das vigotas, para não pagar duas vezes.":""));
+      }
+    }else if(o.barras){
+      add(et,`${nm} · aço (total)`,o.barras,"kg",regrasAco(el,"CA-50","10"),
+        `O relatório "Quantidades da obra" traz só o peso total de aço (${fmt(o.barras,0)} kg). Sem o relatório por diâmetro, usamos o aço CA-50 de 10 mm como média. Envie o PDF "Quantidades de armadura por diâmetro" para um preço mais preciso.`,{estimado:true});
+    }
+  }
+  return novos;
+}
+
+async function importar(files){
+  if(!window.pdfjsLib){toast("Não consegui carregar o leitor de PDF. Verifique a internet e recarregue a página.");return}
+  pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  let qtd=null,det=null;const nomes=[];
+  for(const f of files){
+    try{
+      const L=await linhasPDF(f);const t=norm(L.slice(0,6).join(" "));
+      if(/ARMADURA/.test(t)){det={L};nomes.push([f.name,"armadura"])}
+      else if(/QUANTIDADES DA OBRA/.test(t)){qtd=lerQuantidades(L);PORPISO=lerQuantidadesPorPiso(L);nomes.push([f.name,"quantidades"])}
+      else if(/SUPERFICIES E VOLUMES/.test(t)){nomes.push([f.name,"resumo"])}
+      else nomes.push([f.name,"desconhecido"]);
+    }catch(e){nomes.push([f.name,"erro"])}
+  }
+  if(det)det=lerArmadura(det.L,qtd);
+  if(!qtd&&det){ // só armadura: cria os itens de aço
+    qtd={};Object.keys(det).forEach(k=>{const el=k.split("|")[0];qtd[el]=qtd[el]||{forma:0,superficie:0,volume:0,barras:0}});
+  }
+  ARQS=ARQS.concat(nomes.map(([n,t])=>({n,t,em:new Date().toISOString()})));
+  if(qtd){
+    const novos=gerarItens(qtd,det);
+    ITENS=ITENS.filter(i=>i.fonte!=="CYPECAD").concat(novos);
+    toast(`${novos.length} serviços criados a partir do CYPECAD.`);
+  }else toast("Não reconheci os relatórios. Envie \"Quantidades da obra\" do CYPECAD.");
+  salvar();render();
+}
+
+/* ---------- checklist do que costuma faltar ---------- */
+const CHECK={
+  "01":[["Placa de obra","PLACA DE OBRA"],["Locação da obra","LOCACAO"],["Instalações provisórias","LIGACAO PROVISORIA|ENTRADA PROVISORIA|ABRIGO PARA"],["Barracão / depósito","BARRACAO|CONTAINER|DEPOSITO"],["Limpeza do terreno","LIMPEZA (MECANIZADA )?DE (CAMADA|TERRENO)|ROCADO|CAPINA"]],
+  "02":[["Escavação","ESCAVACAO"],["Reaterro / aterro","REATERRO|ATERRO"]],
+  "03":[["Escavação de cavas e valas","ESCAVACAO"],["Lastro de concreto magro","LASTRO"],["Fôrma","FORMA"],["Armação","ARMACAO"],["Concreto","CONCRETAGEM"]],
+  "04":[["Fôrma de pilares","FORMA DE PILARES"],["Fôrma de vigas","FORMA DE VIGA"],["Armação","ARMACAO"],["Concreto","CONCRETAGEM"],["Laje","^LAJE"]],
+  "05":[["Alvenaria","ALVENARIA DE VEDACAO"],["Vergas e contravergas","VERGA"],["Encunhamento","ENCUNHAMENTO|FIXACAO \\(ENCUNHAMENTO\\)"]],
+  "06":[["Estrutura do telhado","TRAMA|ESTRUTURA DE MADEIRA|ESTRUTURA METALICA|TESOURA"],["Telhas","TELHAMENTO"],["Cumeeira","CUMEEIRA"],["Rufos e calhas","RUFO|CALHA"]],
+  "07":[["Impermeabilização","IMPERMEABILIZACAO"]],
+  "08":[["Tubulação de água","TUBO, PVC, SOLDAVEL"],["Tubulação de esgoto","TUBO PVC, SERIE NORMAL, ESGOTO"],["Registros","REGISTRO"],["Louças","VASO SANITARIO|LAVATORIO"],["Caixa d'água","CAIXA D.AGUA|RESERVATORIO"]],
+  "09":[["Eletrodutos","ELETRODUTO"],["Cabos","CABO DE COBRE"],["Tomadas e interruptores","TOMADA|INTERRUPTOR"],["Quadro de distribuição","QUADRO DE DISTRIBUICAO"]],
+  "10":[["Chapisco","CHAPISCO"],["Emboço / massa única","EMBOCO|MASSA UNICA"],["Revestimento cerâmico","REVESTIMENTO CERAMICO"]],
+  "11":[["Contrapiso","CONTRAPISO"],["Piso cerâmico / porcelanato","PISO|PORCELANATO"],["Rodapé","RODAPE"]],
+  "12":[["Portas","PORTA"],["Janelas","JANELA"]],
+  "13":[["Massa e selador","MASSA|SELADOR|FUNDO"],["Pintura","PINTURA"]],
+  "14":[["Limpeza final","LIMPEZA FINAL"],["Calçada","CALCADA|PASSEIO"]]
+};
+const BUSCA_TERMO={"Placa de obra":"placa de obra","Locação da obra":"locação convencional de obra","Instalações provisórias":"ligação provisória","Barracão / depósito":"barracão","Limpeza do terreno":"limpeza de camada vegetal","Escavação":"escavação","Reaterro / aterro":"reaterro","Escavação de cavas e valas":"escavação manual","Lastro de concreto magro":"lastro de concreto magro","Alvenaria":"alvenaria de vedação blocos cerâmicos","Vergas e contravergas":"verga","Encunhamento":"encunhamento","Estrutura do telhado":"trama de madeira","Telhas":"telhamento","Cumeeira":"cumeeira","Rufos e calhas":"rufo","Impermeabilização":"impermeabilização","Tubulação de água":"tubo pvc soldável","Tubulação de esgoto":"tubo pvc esgoto","Registros":"registro de gaveta","Louças":"vaso sanitário","Caixa d'água":"caixa d'água","Eletrodutos":"eletroduto","Cabos":"cabo de cobre","Tomadas e interruptores":"tomada","Quadro de distribuição":"quadro de distribuição","Chapisco":"chapisco","Emboço / massa única":"massa única","Revestimento cerâmico":"revestimento cerâmico","Contrapiso":"contrapiso","Piso cerâmico / porcelanato":"piso porcelanato","Rodapé":"rodapé","Portas":"porta de madeira","Janelas":"janela de alumínio","Massa e selador":"selador","Pintura":"pintura látex","Limpeza final":"limpeza final","Calçada":"calçada"};
+
+/* ---------- busca ---------- */
+function buscar(q,lim=40){
+  if(!BASE)return[];
+  const t=norm(q).split(/\s+/).filter(Boolean);
+  if(!t.length)return[];
+  return BASE.composicoes.filter(c=>t.every(w=>c.n.includes(w)||c[0]===w)).sort((a,b)=>(preco(b)>0)-(preco(a)>0)).slice(0,lim);
+}
+
+/* ---------- desenho ---------- */
+const abertas=new Set(ld("obimorca.abertas",["03","04"]));
+let altAberto=null, whyAberto=new Set(), addEtapa=null;
+const CORES=["var(--steel)","var(--accent)","#7c9a94","#c9a26b","#6b8fb3","#a3788f","#8aa36b"];
+
+function totais(){
+  const porEt={};let cd=0;
+  for(const i of ITENS){if(!i.ok)continue;const v=i.qtd*preco(MAPA[i.cod]);cd+=v;porEt[i.etapa]=(porEt[i.etapa]||0)+v}
+  return{cd,porEt};
+}
+function render(){
+  const ref=META&&META.referencia;
+  $("obra").innerHTML=`<span>Obra <b>${esc(CFG.nome||"sem nome")}</b></span><span>Local <b>${esc(CFG.cidade||"—")}/${UF}</b></span><span>Base <b>SINAPI ${ref?ref.split("-").reverse().join("/"):"—"}</b></span><span>Regime <b>${REG===4?"desonerado":"não desonerado"}</b></span><span>BDI <b>${fmt(BDI)}%</b></span>${CFG.nome?"":`<span class="pill warn">configure a obra no passo 1</span>`}`;
+  const{cd,porEt}=totais(),pv=cd*(1+BDI/100),area=+CFG.area||0;
+  const ets=etapasAtivas();
+  $("totais").innerHTML=`<h2>Totais</h2>
+    <div class="big">${R$(pv)}</div><div class="hint">preço de venda com BDI</div>
+    <div class="etbar" role="img" aria-label="Divisão do custo por etapa">${ets.filter(e=>porEt[e[0]]).map((e,i)=>`<span style="width:${(porEt[e[0]]/cd*100).toFixed(2)}%;background:${CORES[i%CORES.length]}" title="${esc(e[1])}: ${R$(porEt[e[0]])}"></span>`).join("")}</div>
+    <dl><dt>Custo direto</dt><dd>${R$(cd)}</dd><dt>BDI (${fmt(BDI)}%)</dt><dd>${R$(pv-cd)}</dd>
+    ${area?`<dt>Por m² (${fmt(area,0)} m²)</dt><dd>${R$(pv/area)}</dd>`:""}
+    <div class="final" style="display:contents"><dt>Preço de venda</dt><dd>${R$(pv)}</dd></div></dl>
+    <p class="hint" style="margin:8px 0 0">${ITENS.filter(i=>i.ok).length} serviços ativos. ${ets.filter(e=>!porEt[e[0]]).length} etapas ainda sem preço.</p>`;
+  $("files").innerHTML=ARQS.slice(-6).map(a=>`<div><span class="pill ${a.t==="erro"||a.t==="desconhecido"?"warn":"ok"}">${esc(a.t)}</span><span>${esc(a.n)}</span></div>`).join("");
+
+  if(!BASE){$("main").innerHTML=`<div class="note">A base SINAPI de ${UF} não está disponível no site ainda. Rode o robô de atualização no GitHub.</div>`;return}
+  let h="";
+  if(!ITENS.length)h+=`<div class="empty"><svg viewBox="0 0 160 90" aria-hidden="true"><rect class="c" x="20" y="54" width="120" height="10"/><rect class="c" x="30" y="20" width="10" height="34"/><rect class="c" x="120" y="20" width="10" height="34"/><rect class="c" x="20" y="12" width="120" height="8"/><path class="l" d="M4 80h152"/><rect class="c" x="26" y="64" width="18" height="16"/><rect class="c" x="116" y="64" width="18" height="16"/></svg>
+    <p><b>Nenhum serviço ainda.</b> Importe os PDFs do CYPECAD ao lado para lançar fundações e estrutura, ou adicione serviços em qualquer etapa abaixo.</p></div>`;
+  for(const [c,nome] of ets){
+    const its=ITENS.filter(i=>i.etapa===c);
+    const txt=its.filter(i=>i.ok&&MAPA[i.cod]).map(i=>MAPA[i.cod].n);
+    const chk=(CHECK[c]||[]).map(([n,re])=>{const r=new RegExp(re);return[n,txt.some(t=>r.test(t))]});
+    const falta=chk.filter(x=>!x[1]).length;
+    const sub=its.filter(i=>i.ok).reduce((s,i)=>s+i.qtd*preco(MAPA[i.cod]),0);
+    const open=abertas.has(c);
+    h+=`<section class="etapa ${open?"open":""}" data-et="${c}">
+      <header data-tog="${c}" role="button" tabindex="0" aria-expanded="${open}"><h3><span class="code">${c}</span>${esc(nome)}</h3>
+        ${falta?`<span class="pill warn">${falta} ${falta>1?"itens":"item"} a conferir</span>`:`<span class="pill ok">completa</span>`}
+        <span class="sum">${R$(sub)}</span></header>
+      <div class="body">
+        <div class="chk">${chk.map(([n,ok])=>ok?`<span class="ok">✓ ${esc(n)}</span>`:`<span class="falta">Falta? ${esc(n)} <button type="button" data-busca="${c}|${esc(BUSCA_TERMO[n]||n)}">adicionar</button></span>`).join("")}</div>
+        ${its.length?`<div class="tbl"><table><thead><tr><th></th><th>Serviço</th><th class="n">Qtd.</th><th>Un.</th><th class="n">Unitário</th><th class="n">Total</th></tr></thead><tbody>
+        ${its.map(i=>linha(i)).join("")}</tbody></table></div>`:""}
+        ${addEtapa===c?addForm(c):`<div><button class="btn small ghost" type="button" data-add="${c}">+ Adicionar serviço</button></div>`}
+      </div></section>`;
+  }
+  $("main").innerHTML=h;
+  if(addEtapa){const a=$("addQ");if(a){a.focus();a.setSelectionRange(a.value.length,a.value.length)}}
+}
+function linha(i){
+  const c=MAPA[i.cod],pu=preco(c),tot=i.qtd*pu;
+  const alts=altAberto===i.id;
+  return `<tr class="${i.ok?"":"off"}" data-id="${i.id}">
+   <td><input type="checkbox" aria-label="Incluir" data-ok="${i.id}" ${i.ok?"checked":""}></td>
+   <td><span class="orig">${esc(i.origem)}${i.estimado?' · <span class="pill warn">estimado</span>':""}</span>
+     ${c?`<span class="desc"><span class="cod">${c[0]}</span>${esc(c[1])}</span>`:`<span class="desc pill warn">nenhuma composição encontrada, escolha uma</span>`}
+     <div class="row" style="margin-top:4px"><button class="why" type="button" data-why="${i.id}">${whyAberto.has(i.id)?"ocultar explicação":"por que esta?"}</button><button class="why" type="button" data-alt="${i.id}">trocar</button><button class="why" type="button" data-del="${i.id}">remover</button></div>
+     ${whyAberto.has(i.id)?`<div class="whytxt">${esc(i.why||"Serviço adicionado por você.")}</div>`:""}
+     ${alts?altBox(i):""}
+   </td>
+   <td class="n"><input type="number" step="0.01" min="0" value="${i.qtd}" data-q="${i.id}" aria-label="Quantidade"></td>
+   <td>${esc(i.un||(c&&c[2])||"")}</td>
+   <td class="n">${pu?fmt(pu):'<span class="pill warn">sem preço</span>'}</td>
+   <td class="n">${fmt(tot)}</td></tr>`;
+}
+function altBox(i){
+  const lista=(i.q?buscar(i.q,30):(i.alts||[]).map(k=>MAPA[k]).filter(Boolean));
+  return `<div class="alts"><input type="text" id="altQ" data-altq="${i.id}" value="${esc(i.q||"")}" placeholder="Buscar outra composição (ex.: fôrma pilar 4 utilizações)">
+    <ul>${lista.map(c=>`<li><button type="button" data-pick="${i.id}|${c[0]}"><span class="cod">${c[0]}</span><span>${esc(c[1])}</span><span class="pr">${preco(c)?fmt(preco(c)):"—"} /${esc(c[2])}</span></button></li>`).join("")||'<li class="hint">Nada encontrado.</li>'}</ul></div>`;
+}
+let addQ="",addSel=null;
+function addForm(c){
+  const r=buscar(addQ,25);
+  return `<div class="alts"><b>Adicionar serviço em ${esc((ETAPAS.find(e=>e[0]===c)||[])[1])}</b>
+   <input type="text" id="addQ" value="${esc(addQ)}" placeholder="Digite o serviço (ex.: alvenaria bloco cerâmico 14)">
+   <ul>${r.map(x=>`<li><button type="button" data-addpick="${x[0]}" ${addSel===x[0]?'style="background:var(--accent-soft)"':""}><span class="cod">${x[0]}</span><span>${esc(x[1])}</span><span class="pr">${preco(x)?fmt(preco(x)):"—"} /${esc(x[2])}</span></button></li>`).join("")||(addQ?'<li class="hint">Nada encontrado. Tente outras palavras.</li>':'<li class="hint">Digite para buscar na SINAPI.</li>')}</ul>
+   <div class="add"><span class="hint">${addSel?`Selecionado: <b>${addSel}</b>. Informe a quantidade em ${esc(MAPA[addSel][2])}:`:"Escolha um item da lista."}</span>
+   <input type="number" id="addN" step="0.01" min="0" placeholder="Qtd." ${addSel?"":"disabled"}>
+   <span class="row"><button class="btn small" type="button" id="addOk" ${addSel?"":"disabled"}>Adicionar</button><button class="btn small ghost" type="button" id="addX">Fechar</button></span></div></div>`;
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-tog],[data-why],[data-alt],[data-del],[data-pick],[data-add],[data-busca],[data-addpick],#addOk,#addX");
+  if(!t)return;
+  const d=t.dataset;
+  if(d.tog){abertas.has(d.tog)?abertas.delete(d.tog):abertas.add(d.tog);sv("obimorca.abertas",[...abertas]);render();return}
+  if(d.why){whyAberto.has(d.why)?whyAberto.delete(d.why):whyAberto.add(d.why);render();return}
+  if(d.alt){altAberto=altAberto===d.alt?null:d.alt;render();return}
+  if(d.del){ITENS=ITENS.filter(i=>i.id!==d.del);salvar();render();return}
+  if(d.pick){const[id,cod]=d.pick.split("|");const i=ITENS.find(x=>x.id===id);i.cod=cod;i.un=MAPA[cod][2];i.why=(i.why||"")+` Você trocou a composição para ${cod}.`;altAberto=null;salvar();render();return}
+  if(d.add){addEtapa=d.add;addQ="";addSel=null;render();return}
+  if(d.busca){const[c,q]=d.busca.split("|");abertas.add(c);addEtapa=c;addQ=q;addSel=null;render();return}
+  if(d.addpick){addSel=d.addpick;render();setTimeout(()=>$("addN")&&$("addN").focus());return}
+  if(t.id==="addX"){addEtapa=null;render();return}
+  if(t.id==="addOk"){const q=parseFloat(($("addN").value||"").replace(",","."));if(!(q>0)){toast("Informe uma quantidade maior que zero.");return}
+    const c=MAPA[addSel];ITENS.push({id:uid(),etapa:addEtapa,origem:"lançado por você",qtd:q,un:c[2],cod:c[0],alts:[],ok:true,fonte:"manual"});
+    addSel=null;addQ="";salvar();render();toast("Serviço adicionado.");return}
+});
+document.addEventListener("keydown",e=>{const t=e.target.closest("[data-tog]");if(t&&(e.key==="Enter"||e.key===" ")){e.preventDefault();t.click()}});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.dataset.ok){const i=ITENS.find(x=>x.id===t.dataset.ok);i.ok=t.checked;salvar();render()}
+  if(t.dataset.q){const i=ITENS.find(x=>x.id===t.dataset.q);i.qtd=parseFloat(t.value)||0;salvar();render()}
+});
+let tq;
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.altq){const i=ITENS.find(x=>x.id===t.dataset.altq);i.q=t.value;clearTimeout(tq);tq=setTimeout(()=>{render();const a=$("altQ");if(a){a.focus();a.setSelectionRange(a.value.length,a.value.length)}},250)}
+  if(t.id==="addQ"){addQ=t.value;addSel=null;clearTimeout(tq);tq=setTimeout(render,250)}
+});
+const drop=$("drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>importar([...e.dataTransfer.files].filter(f=>/pdf$/i.test(f.name))));
+$("fileIn").addEventListener("change",e=>{importar([...e.target.files]);e.target.value=""});
+$("limpar").onclick=()=>$("limparOk").hidden=false;
+$("limparNao").onclick=()=>$("limparOk").hidden=true;
+$("limparSim").onclick=()=>{ITENS=[];ARQS=[];salvar();$("limparOk").hidden=true;render()};
+$("csv").onclick=()=>{
+  const ets=Object.fromEntries(ETAPAS);
+  const lin=[["Etapa","Código SINAPI","Descrição","Origem","Unidade","Quantidade","Custo unitário","Custo total","Preço unitário com BDI","Preço total com BDI"]];
+  for(const [c] of etapasAtivas())for(const i of ITENS.filter(x=>x.ok&&x.etapa===c)){
+    const m=MAPA[i.cod]||["","",""],pu=preco(m);
+    lin.push([`${c} ${ets[c]}`,m[0],m[1],i.origem,i.un||m[2],fmt(i.qtd),fmt(pu),fmt(pu*i.qtd),fmt(pu*(1+BDI/100)),fmt(pu*i.qtd*(1+BDI/100))]);
+  }
+  const{cd}=totais();lin.push([]);lin.push(["","","Custo direto","","","","",fmt(cd)]);lin.push(["","","BDI "+fmt(BDI)+"%","","","","",fmt(cd*BDI/100)]);lin.push(["","","Preço de venda","","","","",fmt(cd*(1+BDI/100))]);
+  const csv="﻿"+lin.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download=`orcamento-${(CFG.nome||"obra").replace(/[^\w-]+/g,"-").toLowerCase()}.csv`;document.body.appendChild(a);a.click();a.remove();
+};
+
+carregarBase().then(()=>{
+  // atualiza sugestões que ficaram sem composição numa base anterior
+  ITENS.forEach(i=>{if(i.cod&&!MAPA[i.cod])i.cod=null});
+  render();
+});
+render();
+})();
+</script>
+</body>
+</html>

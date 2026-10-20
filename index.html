@@ -141,7 +141,7 @@ body{margin:0}
 <div class="wrap">
   <header class="top">
     <h1>OBIM <span>Orça</span></h1>
-    <p>Assistente para montar a base de um orçamento de obra, passo a passo e com explicação em cada campo. <a href="busca.html">Consultar a base SINAPI</a></p>
+    <p>Assistente para montar a base de um orçamento de obra, passo a passo e com explicação em cada campo. <a href="orcamento.html">Lançar serviços</a> · <a href="busca.html">Consultar a base SINAPI</a></p>
   </header>
 
   <div class="grid">
@@ -528,7 +528,7 @@ function stepResumo(){const e=encargos();return `
   <div><h4>BDI</h4><dl><dt>Total</dt><dd>${fmt(calcBDI())}%</dd><dt>Tributos</dt><dd>${fmt(tributos())}%</dd></dl></div>
   <div><h4>Etapas (${etapasSel().length})</h4><p class="hint" style="margin:0">${etapasSel().map(x=>x[1]).join(", ")}</p></div>
   <div class="field"><label for="resumoTxt">Resumo em texto</label><textarea id="resumoTxt" readonly>${esc(resumoTexto())}</textarea>
-   <div class="presets"><button type="button" class="btn small" id="copy">Copiar resumo</button><button type="button" class="btn small ghost" id="reset">Começar um orçamento novo</button><span class="toast" id="copyMsg" role="status"></span></div>
+   <div class="presets"><a class="btn small" href="orcamento.html" style="text-decoration:none">Próximo: lançar serviços</a><button type="button" class="btn small ghost" id="copy">Copiar resumo</button><button type="button" class="btn small ghost" id="reset">Começar um orçamento novo</button><span class="toast" id="copyMsg" role="status"></span></div>
    <div class="note" id="resetConfirm" hidden>Isso apaga o rascunho atual deste navegador. <button type="button" class="btn small" id="resetYes">Apagar e começar</button> <button type="button" class="btn small ghost" id="resetNo">Cancelar</button></div>
   </div>
  </div>`}
