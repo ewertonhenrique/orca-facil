@@ -43,13 +43,18 @@ def baixar(ano, mes):
         with urllib.request.urlopen(req, timeout=120) as r:
             dados = r.read()
     except Exception as e:  # 404 enquanto a Caixa não publica o mês
-        print(f"  {ano}-{mes:02d}: indisponível ({e})")
+        aviso(f"{ano}-{mes:02d}: indisponível em {url} ({e})")
         return None
     if not dados.startswith(b"PK"):
-        print(f"  {ano}-{mes:02d}: resposta não é um zip")
+        aviso(f"{ano}-{mes:02d}: {url} não devolveu um zip (início: {dados[:80]!r})")
         return None
     print(f"  {ano}-{mes:02d}: baixado ({len(dados) // 1024} KB)")
     return dados
+
+
+def aviso(msg):
+    # aparece como anotação no resumo da execução do GitHub Actions
+    print(f"::warning::{msg}", flush=True)
 
 
 def abrir_planilha(zip_bytes):
@@ -191,4 +196,12 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            print(f"::error::{e.code}", flush=True)
+        raise
+    except Exception as e:
+        print(f"::error::{type(e).__name__}: {e}", flush=True)
+        raise
