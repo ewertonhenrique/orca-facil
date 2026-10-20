@@ -272,6 +272,7 @@ function bind(){
   document.querySelectorAll("[data-why]").forEach(b=>b.onclick=()=>{
     const t=document.getElementById(b.dataset.why); if(t){t.hidden=!t.hidden; b.setAttribute("aria-expanded",String(!t.hidden))}
   });
+  const um=document.getElementById("usarMes"); if(um)um.onclick=()=>{S.mes=META.referencia;save();render()};
   const q=document.getElementById("quickGo"); if(q)q.onclick=()=>{
     for(const k in BDI_REF)S.bdi[k]=BDI_REF[k].q[1]; S.preset=1; S.encargos=null; S.etapas=null;
     if(!S.base)S.base="SINAPI"; S.exemplo=false; save(); go(STEPS.length-1);
@@ -351,7 +352,7 @@ function stepBase(){
  <div class="fields">
   <div class="row2">
    <div class="field"><label for="f-uf">Estado (UF)</label><select id="f-uf" data-k="uf" data-rerender>${UFS.map(u=>`<option ${u===S.uf?"selected":""}>${u}</option>`).join("")}</select></div>
-   <div class="field"><label for="f-mes">Mês de referência</label><input id="f-mes" type="month" data-k="mes" value="${S.mes}"><span class="hint">Use o mês mais recente publicado. A SINAPI costuma sair com cerca de um mês de atraso.</span></div>
+   <div class="field"><label for="f-mes">Mês de referência</label><input id="f-mes" type="month" data-k="mes" data-rerender value="${S.mes}"><span class="hint">Use o mês mais recente publicado. A SINAPI costuma sair com cerca de um mês de atraso.</span>${META&&META.referencia&&S.mes!==META.referencia?`<div class="note">A SINAPI disponível no site é de <b>${mesExt(META.referencia)}</b>${S.mes>META.referencia?". O mês escolhido ainda não foi publicado pela Caixa":""}. <button type="button" class="btn small" id="usarMes">Usar ${mesExt(META.referencia)}</button></div>`:""}</div>
   </div>
   <div class="field"><span class="lbl">Base de preços principal</span>
    <div class="choices">
@@ -540,7 +541,7 @@ function helpResumo(){return `
 
 function mesExt(r){const[a,m]=r.split("-");return ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+m-1]+"/"+a}
 fetch("dados/sinapi/meta.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(m=>{
-  META=m; if(m&&m.referencia&&S.exemplo){S.mes=m.referencia}
+  META=m; if(m&&m.referencia&&(S.exemplo||S.mes>m.referencia)){S.mes=m.referencia;save()}
   render();
 }).catch(()=>{});
 render();
