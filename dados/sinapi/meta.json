@@ -1,1 +1,35 @@
-{"base":"SINAPI","referencia":null,"atualizado_em":null,"fonte":"Caixa Econômica Federal / IBGE","ufs":[]}
+{
+  "base": "SINAPI",
+  "referencia": "2026-09",
+  "atualizado_em": "2026-10-20T20:58:30+00:00",
+  "fonte": "Caixa Econômica Federal / IBGE",
+  "ufs": [
+    "AC",
+    "AL",
+    "AM",
+    "AP",
+    "BA",
+    "CE",
+    "DF",
+    "ES",
+    "GO",
+    "MA",
+    "MG",
+    "MS",
+    "MT",
+    "PA",
+    "PB",
+    "PE",
+    "PI",
+    "PR",
+    "RJ",
+    "RN",
+    "RO",
+    "RR",
+    "RS",
+    "SC",
+    "SE",
+    "SP",
+    "TO"
+  ]
+}
