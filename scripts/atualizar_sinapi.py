@@ -10,11 +10,14 @@ Saída em dados/sinapi/:
     <UF>.json   composições e insumos daquela UF, com custo não desonerado e desonerado
 """
 import datetime as dt
+import http.cookiejar
 import io
 import json
 import re
 import sys
+import time
 import unicodedata
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -38,12 +41,25 @@ def norm(txt):
 
 def baixar(ano, mes):
     url = URL.format(ano=ano, mes=mes)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (orca-facil)"})
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            dados = r.read()
-    except Exception as e:  # 404 enquanto a Caixa não publica o mês
-        aviso(f"{ano}-{mes:02d}: indisponível em {url} ({e})")
+    # o site da Caixa redireciona para gravar um cookie antes de liberar o arquivo
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) obim-orca"),
+                         ("Accept", "*/*")]
+    dados, erro = None, None
+    for tentativa in range(3):
+        try:
+            with opener.open(url, timeout=180) as r:
+                dados = r.read()
+            break
+        except urllib.error.HTTPError as e:
+            erro = e
+            if e.code == 404:
+                break
+        except Exception as e:
+            erro = e
+        time.sleep(5 * (tentativa + 1))
+    if dados is None:  # 404 enquanto a Caixa não publica o mês
+        aviso(f"{ano}-{mes:02d}: indisponível em {url} ({erro})")
         return None
     if not dados.startswith(b"PK"):
         aviso(f"{ano}-{mes:02d}: {url} não devolveu um zip (início: {dados[:80]!r})")

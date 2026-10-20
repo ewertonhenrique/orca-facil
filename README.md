@@ -1,4 +1,4 @@
-# Orça Fácil Residencial
+# OBIM Orça
 
 Site para montar orçamentos de obras residenciais, passo a passo, com explicação em cada campo e a base SINAPI atualizada sozinha todo mês.
 
@@ -16,7 +16,7 @@ Site para montar orçamentos de obras residenciais, passo a passo, com explicaç
 
 1. No GitHub, abra **Settings → Pages** e em **Source** escolha **GitHub Actions**.
 2. Abra **Actions → Atualizar SINAPI e publicar site → Run workflow** para baixar a primeira base.
-3. O endereço do site aparece em **Settings → Pages** (algo como `https://allandallen.github.io/orca-facil/`).
+3. O endereço do site aparece em **Settings → Pages** (algo como `https://ewertonhenrique.github.io/orca-facil/`).
 
 Depois disso, o robô roda sozinho. Se a Caixa mudar o formato da planilha e o robô falhar, o GitHub manda um e-mail avisando, e o site continua com a última base que deu certo.
 

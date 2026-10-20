@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Consulta SINAPI · Orça Fácil</title>
+<title>Consulta SINAPI · OBIM Orça</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 :root{
@@ -65,7 +65,7 @@ mark{background:var(--accent-soft);color:inherit}
 (function(){
 const $=id=>document.getElementById(id);
 const UFS=["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
-let pref={};try{pref=JSON.parse(localStorage.getItem("orcafacil.rascunho")||"{}")}catch(e){}
+let pref={};try{pref=JSON.parse(localStorage.getItem("obimorca.rascunho")||"{}")}catch(e){}
 $("uf").innerHTML=UFS.map(u=>`<option ${u===(pref.uf||"GO")?"selected":""}>${u}</option>`).join("");
 if(pref.desonerado==="sim")$("reg").value="4";
 const cache={};let meta=null;
